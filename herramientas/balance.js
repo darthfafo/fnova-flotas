@@ -15,7 +15,7 @@ const crearMalla = () => null
 function valor(batalla, equipo) {
   let v = 0
   for (const n of batalla.naves)
-    if (n.viva && n.equipo === equipo) v += (n.tipo.costo / n.tipo.porBatallon) * (n.estructura / n.tipo.estructuraMax)
+    if (n.viva && n.equipo === equipo && !n.lanzada) v += (n.tipo.costo / n.tipo.porBatallon) * (n.estructura / n.tipo.estructuraMax)
   return v
 }
 

@@ -13,7 +13,7 @@ const c=new THREE.OrthographicCamera(-40,40,40*innerHeight/innerWidth,-40*innerH
 ({arriba:[0,100,0.001],lado:[100,0,0],frente:[0,0,100],tres:[60,50,70]})[vista].forEach((v,i)=>c.position.setComponent(i,v));c.lookAt(0,0,0);
 s.add(new THREE.HemisphereLight(0xffffff,0x404050,2));const d=new THREE.DirectionalLight(0xffffff,2);d.position.set(5,10,4);s.add(d);
 const solo=new URLSearchParams(location.search).get('solo');
-const names=solo?[solo]:['rlab-fragata','rlab-ranger','rylek-skiff','rylek-galley','rylek-galleon'];
+const names=solo?[solo]:['rlab-skycruiser','rylek-brig','rlab-fragata','rlab-ranger','rylek-skiff','rylek-galley','rylek-galleon'];
 const L=new GLTFLoader();
 names.forEach((n,i)=>L.load('../assets/modelos/'+n+'.glb',g=>{const m=g.scene;const bb=new THREE.Box3().setFromObject(m);const sz=bb.getSize(new THREE.Vector3());const k=14/Math.max(sz.x,sz.y,sz.z);
  const ctr=bb.getCenter(new THREE.Vector3());const piv=new THREE.Group();m.position.sub(ctr);piv.add(m);piv.scale.setScalar(k);

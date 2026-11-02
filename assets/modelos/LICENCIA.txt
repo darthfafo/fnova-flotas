@@ -10,3 +10,5 @@ empaquetados con herramientas/gltf_a_glb.py (texturas reducidas) y teñidos por 
 - rylek-skiff.glb: "Rylek's Raiders: Fighter class Skiff" (https://sketchfab.com/3d-models/ryleks-raiders-fighter-class-skiff-a2b5d8ad10694182953f0cd30c05a88b) de Gwyvern (https://sketchfab.com/Gwyvern)
 - rylek-galley.glb: "Rylek's Raiders: Scavenger Class Galley" (https://sketchfab.com/3d-models/ryleks-raiders-scavenger-class-galley-ebfe1790fe25478f9d650815716d30e5) de Gwyvern
 - rylek-galleon.glb: "Rylek's Raiders: Predator class galleon" (https://sketchfab.com/3d-models/ryleks-raiders-predator-class-galleon-82108cf3ea684fd789d4e579633103f1) de Gwyvern
+- rylek-brig.glb: "Rylek's Raiders: Laboror Class Brig" (https://sketchfab.com/3d-models/ryleks-raiders-laboror-class-brig-4c31d80eca2d426893d66a61db5fdbb5) de Gwyvern
+- rlab-skycruiser.glb: "Sky Cruiser" (https://sketchfab.com/3d-models/sky-cruiser-6f7851a1ba094f27893af02cd971e30c) de Rakshaan

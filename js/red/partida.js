@@ -76,6 +76,7 @@ export class SincroAnfitrion {
       else if (ev.tipo === 'flak') this.eventos.push(['f', ev.pos.toArray().map(r1), ev.equipo])
       else if (ev.tipo === 'impactoRoca') this.eventos.push(['r', ev.pos.toArray().map(r1), ev.arma])
       else if (ev.tipo === 'rocaDestruida') this.eventos.push(['R', ev.asteroide.id])
+      else if (ev.tipo === 'lanzamiento') this.eventos.push(['L', indice(ev.portanaves), b.batallones.indexOf(ev.batallon)])
     }
   }
 
@@ -216,7 +217,11 @@ export class BatallaRemota extends Batalla {
       this.eventos.push({ tipo: 'impacto', nave, pos: pos(ev[2]), escudo: ev[3] === 1, arma: ev[4] })
     } else if (ev[0] === 'f') this.eventos.push({ tipo: 'flak', pos: pos(ev[1]), equipo: otroEquipo(ev[2]) })
     else if (ev[0] === 'r') this.eventos.push({ tipo: 'impactoRoca', pos: pos(ev[1]), arma: ev[2] })
-    else if (ev[0] === 'R') {
+    else if (ev[0] === 'L') {
+      // Un portanaves lanzó un caza: se crea igual acá (mismo orden de naves y batallones).
+      const portanaves = this.naves[ev[1]]
+      if (portanaves) this.lanzarCaza(portanaves, this.batallones[ev[2]])
+    } else if (ev[0] === 'R') {
       const a = this.terreno.asteroides.find((x) => x.id === ev[1])
       if (a && this.terreno.dañar(a, Infinity)) this.eventos.push({ tipo: 'rocaDestruida', asteroide: a })
     }

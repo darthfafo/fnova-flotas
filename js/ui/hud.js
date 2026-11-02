@@ -65,6 +65,7 @@ export class Hud {
   // cualquier escala (de 5 a 60 batallones). Tocar el título del grupo
   // selecciona todos los de ese tipo.
   armarFlota() {
+    this.batallonesArmados = this.batalla.batallones.length
     const el = $('#hud-flota')
     el.innerHTML = '<div class="titulo-lista">Tu flota</div>'
     this.grupos = []
@@ -83,7 +84,7 @@ export class Hud {
         const d = document.createElement('div')
         d.className = 'ficha'
         d.title = `${b.nombre} · doble clic para enfocar`
-        d.innerHTML = `<b>${b.nombre.split(' ').pop()}</b><div class="barras"><div class="es"><i></i></div><div class="et"><i></i></div></div>`
+        d.innerHTML = `<b>${b.escuadrilla ? 'E' : ''}${b.nombre.split(' ').pop()}</b><div class="barras"><div class="es"><i></i></div><div class="et"><i></i></div></div>`
         d.onclick = (e) => {
           this.entrada.seleccionar([b], e.shiftKey)
           this.entrada.alOrden?.('seleccion')
@@ -115,7 +116,7 @@ export class Hud {
       const t = b.tipo
       const ventajas = t.ventajaGeneral
         ? `+${Math.round((t.ventajaGeneral - 1) * 100)}% contra todo`
-        : Object.keys(t.ventaja ?? {}).map((k) => TIPOS[k].nombre).join(', ')
+        : Object.keys(t.ventaja ?? {}).map((k) => TIPOS[k].nombre).join(', ') || (t.hangar ? `lanza ${TIPOS[t.hangar.tipo].nombre}s` : '—')
       el.innerHTML = `<h4>${b.nombre}</h4>
         <div class="detalle">${t.rol}</div>
         <div class="stats">
@@ -163,6 +164,11 @@ export class Hud {
   }
 
   actualizarDom() {
+    // Un portanaves armó una escuadrilla nueva: se rearma la lista.
+    if (this.batalla.batallones.length !== this.batallonesArmados) {
+      this.armarFlota()
+      this.refrescarSeleccion()
+    }
     const sel = this.entrada.seleccionados
     for (const b of this.batalla.batallones) {
       if (!b.itemHud) continue
@@ -207,7 +213,7 @@ export class Hud {
     // Balance de fuerzas (valor de lo que queda en pie).
     let propia = 0, enemiga = 0
     for (const n of this.batalla.naves) {
-      if (!n.viva) continue
+      if (!n.viva || n.lanzada) continue
       const v = (n.tipo.costo / n.tipo.porBatallon) * (n.estructura / n.tipo.estructuraMax)
       if (n.equipo === JUGADOR) propia += v
       else enemiga += v

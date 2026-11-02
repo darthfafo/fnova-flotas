@@ -260,6 +260,7 @@ export class Batalla {
     const ordenados = [...batallones].sort((a, b) => b.tipo.largo - a.tipo.largo)
     ordenados.forEach((b, i) => {
       b.orden = { tipo: 'mover' }
+      b.libre = true // una escuadrilla movida a mano deja de escoltar
       b.destino.copy(slots[i]).applyQuaternion(q).add(punto)
       b.rumbo.copy(rumbo)
       b.topeVelocidad = tope
@@ -323,6 +324,7 @@ export class Batalla {
         this.moverNave(n, dt)
         this.dispararNave(n, dt)
         this.regenerar(n, dt)
+        if (n.tipo.hangar) this.operarHangar(n, dt)
       } else if (n.malla !== undefined && n.muerte < 4) {
         // La explosión final de una capital destroza las rocas de alrededor.
         if (n.esCapital && n.muerte < 3 && n.muerte + dt >= 3) this.dañarRocasCerca(n.pos, n.radio * 4, 600)
@@ -337,7 +339,67 @@ export class Batalla {
     this.comprobarFin()
   }
 
+  // --- Hangar de los portanaves -------------------------------------------------
+
+  operarHangar(n, dt) {
+    const h = n.tipo.hangar
+    n.relojHangar = (n.relojHangar ?? h.primero) - dt
+    if (n.relojHangar > 0) return
+    n.relojHangar = h.intervalo
+    n.lanzados ??= 0
+    if (n.lanzados >= h.reserva || (n.escuadrilla && n.escuadrilla.vivas.length >= h.capacidad)) return
+    n.lanzados++
+    this.lanzarCaza(n, n.escuadrilla)
+  }
+
+  // Lanza un caza desde el portanaves a su escuadrilla; la primera vez la
+  // arma. Si la escuadrilla cayó entera, renace con el caza nuevo y vuelve a
+  // escoltar. BatallaRemota lo repite igual cuando el anfitrión avisa, para
+  // que las listas de naves y batallones coincidan.
+  lanzarCaza(portanaves, escuadrilla) {
+    const h = portanaves.tipo.hangar
+    const equipo = portanaves.equipo
+    const faccion = this.facciones[equipo]
+    let b = escuadrilla
+    if (b && !b.viva) {
+      b.orden = { tipo: 'quieto' }
+      b.libre = false
+      b.topeVelocidad = Infinity
+      b.destino.copy(portanaves.pos)
+    }
+    if (!b) {
+      const numero = (this.contador[equipo].escuadrilla = (this.contador[equipo].escuadrilla ?? 0) + 1)
+      b = new Batallon(this.batallones.length + 1, equipo, faccion, h.tipo, numero)
+      b.nombre = `Escuadrilla ${numero}`
+      b.escuadrilla = true
+      b.portanaves = portanaves
+      b.rumbo.copy(portanaves.adelante)
+      b.destino.copy(portanaves.pos)
+      // Sale con la orden del portanaves: si está atacando, va al mismo blanco.
+      const o = portanaves.batallon.orden
+      if (o.tipo === 'atacar' && o.objetivo.viva) b.orden = { tipo: 'atacar', objetivo: o.objetivo, automatico: true }
+      this.batallones.push(b)
+      portanaves.escuadrilla = b
+    }
+    const p = this.plantilla(faccion, h.tipo)
+    const r = portanaves.radio
+    const pos = _w.set((Math.random() - 0.5) * r * 0.3, -r * 0.12, -r * 0.15).applyQuaternion(portanaves.quat).add(portanaves.pos)
+    const nave = new Nave(b, h.tipo, p, pos, portanaves.quat)
+    nave.lanzada = true
+    nave.velocidad = nave.velocidadMax * 0.6
+    nave.malla = this.crearMalla(faccion, h.tipo)
+    b.naves.push(nave)
+    this.naves.push(nave)
+    this.eventos.push({ tipo: 'lanzamiento', nave, portanaves, batallon: b })
+    return nave
+  }
+
   pensarBatallon(b) {
+    // Escuadrilla sin órdenes del comandante: escolta a su portanaves.
+    if (b.escuadrilla && !b.libre && b.orden.tipo === 'quieto' && b.portanaves.viva) {
+      b.destino.copy(b.portanaves.pos).addScaledVector(ARRIBA, b.portanaves.radio * 0.6)
+      b.rumbo.copy(b.portanaves.adelante)
+    }
     // Objetivo destruido: vuelve a quedarse quieto donde está.
     if (b.orden.tipo === 'atacar' && !b.orden.objetivo.viva) {
       b.orden = { tipo: 'quieto' }
@@ -436,12 +498,14 @@ export class Batalla {
     } else {
       // Mover / quieto: ir al lugar en la formación del batallón.
       const q = quatHacia(b.rumbo, _q)
-      const clave = b.formacion + b.naves.length
+      // Las escuadrillas se reacomodan entre las vivas (se suman y caen cazas).
+      const lista = b.escuadrilla ? b.vivas : b.naves
+      const clave = b.formacion + lista.length
       if (b.slotsClave !== clave) {
         b.slotsClave = clave
-        b.slots = slotsFormacion(b.formacion, b.naves.length, n.radio * 3.2)
+        b.slots = slotsFormacion(b.formacion, lista.length, n.radio * 3.2)
       }
-      destino.copy(b.slots[b.naves.indexOf(n)]).applyQuaternion(q).add(b.destino)
+      destino.copy(b.slots[lista.indexOf(n)]).applyQuaternion(q).add(b.destino)
     }
 
     if (!n.esCapital && b.tactica === 'evasiva' && this.tiempo - b.atacadoEn < 2) {

@@ -19,7 +19,7 @@ export class Menus {
       dificultad: 'normal',
       calidad: guardado('calidad', ES_TACTIL ? 'baja' : 'alta'),
       presupuesto: limitar(Number(guardado('presupuesto', PRESUPUESTO_BASE)) || PRESUPUESTO_BASE),
-      flota: { caza: 3, corbeta: 2, bombardero: 2, crucero: 2, acorazado: 0 },
+      flota: { caza: 3, corbeta: 2, bombardero: 2, crucero: 2, portanaves: 0, acorazado: 0 },
       mapa: guardado('mapa', 'mixto'),
     }
     this.alCombatir = alCombatir
@@ -109,7 +109,11 @@ export class Menus {
     for (const clave of ORDEN_TIPOS) {
       const t = TIPOS[clave]
       // Contras derivadas de las tablas de ventaja (nada escrito a mano).
-      const fuerte = t.ventajaGeneral ? [...Object.keys(t.ventaja ?? {}), 'todo'] : Object.keys(t.ventaja ?? {})
+      const fuerte = t.ventajaGeneral
+        ? [...Object.keys(t.ventaja ?? {}), 'todo']
+        : t.hangar // el Portanaves pelea con sus cazas
+          ? Object.keys(TIPOS[t.hangar.tipo].ventaja ?? {})
+          : Object.keys(t.ventaja ?? {})
       const debil = ORDEN_TIPOS.filter((k) => k !== clave && TIPOS[k].ventaja?.[clave])
       const nombres = (l) => l.map((k) => (k === 'todo' ? '+25% a todo' : TIPOS[k].nombre)).join(', ') || '—'
       const fila = document.createElement('div')
@@ -212,16 +216,17 @@ export class Menus {
     this.refrescarFlota()
   }
 
-  // Flota sugerida para el presupuesto: Acorazados en las batallas grandes y
-  // el resto repartido como la mezcla base (3 Cazas, 2 Corbetas, 2
+  // Flota sugerida para el presupuesto: Acorazados en las batallas grandes,
+  // un Portanaves desde 6000 y el resto repartido como la mezcla base (3 Cazas, 2 Corbetas, 2
   // Bombarderos, 2 Cruceros), completando lo que sobre.
   sugerida() {
     const p = this.config.presupuesto
     const flota = Object.fromEntries(ORDEN_TIPOS.map((k) => [k, 0]))
     if (p >= 8000) flota.acorazado = Math.floor(p / 8000)
+    if (p >= 6000) flota.portanaves = 1
     const mezcla = { caza: 3, corbeta: 2, bombardero: 2, crucero: 2 }
     const costoMezcla = Object.entries(mezcla).reduce((s, [k, n]) => s + TIPOS[k].costo * n, 0)
-    const f = (p - flota.acorazado * TIPOS.acorazado.costo) / costoMezcla
+    const f = (p - flota.acorazado * TIPOS.acorazado.costo - flota.portanaves * TIPOS.portanaves.costo) / costoMezcla
     for (const [k, n] of Object.entries(mezcla)) flota[k] = Math.floor(n * f)
     this.config.flota = flota
     for (let agrego = true; agrego; ) {
@@ -236,7 +241,7 @@ export class Menus {
   }
 
   usado() {
-    return ORDEN_TIPOS.reduce((s, k) => s + this.config.flota[k] * TIPOS[k].costo, 0)
+    return ORDEN_TIPOS.reduce((s, k) => s + (this.config.flota[k] ?? 0) * TIPOS[k].costo, 0)
   }
 
   refrescarFlota() {

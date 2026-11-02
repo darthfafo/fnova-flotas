@@ -74,7 +74,7 @@ const menus = new Menus({
   // Batalla chica y fácil, con el tutorial desde el primer paso.
   alTutorial: () =>
     iniciarBatalla(
-      { ...menus.config, presupuesto: 2500, dificultad: 'facil', mapa: 'mixto', flota: { caza: 2, corbeta: 1, bombardero: 1, crucero: 1, acorazado: 0 } },
+      { ...menus.config, presupuesto: 2500, dificultad: 'facil', mapa: 'mixto', flota: { caza: 2, corbeta: 1, bombardero: 1, crucero: 1, portanaves: 0, acorazado: 0 } },
       { tutorial: true },
     ),
 })
@@ -241,7 +241,7 @@ function flotaEnemiga(dificultad, presupuestoBase) {
       resto -= TIPOS[k].costo
     }
   }
-  const pesos = { caza: 3, corbeta: 2, bombardero: 2, crucero: 1.2, acorazado: 0.7 }
+  const pesos = { caza: 3, corbeta: 2, bombardero: 2, crucero: 1.2, portanaves: 0.6, acorazado: 0.7 }
   for (let intentos = 0; intentos < 400; intentos++) {
     const posibles = ORDEN_TIPOS.filter((k) => TIPOS[k].costo <= resto)
     if (!posibles.length) break
@@ -258,7 +258,7 @@ function desplegar(batalla, equipo, flota) {
   const lado = equipo === JUGADOR ? 1 : -1
   const rumbo = new THREE.Vector3(0, 0, -lado)
   // Filas: cazas adelante, capitales atrás.
-  const filas = { caza: 0, corbeta: 0, bombardero: 1, crucero: 2, acorazado: 3 }
+  const filas = { caza: 0, corbeta: 0, bombardero: 1, crucero: 2, portanaves: 3, acorazado: 3 }
   const porFila = [[], [], [], []]
   for (const k of ORDEN_TIPOS) for (let i = 0; i < flota[k]; i++) porFila[filas[k]].push(k)
   const batallones = []
@@ -570,6 +570,10 @@ function procesarEventos(batalla) {
       colorDisparo.set(FACCIONES[batalla.facciones[ev.equipo]].disparo)
       particulas.emitir(ev.pos, _v.set(0, 0, 0), colorDisparo, ev.arma === 'cañon' ? 16 : ev.arma === 'torpedo' ? 8 : 4, 0.08)
       sonido.reproducir(ev.arma, ev.pos, camara)
+    } else if (ev.tipo === 'lanzamiento') {
+      colorDisparo.set(FACCIONES[batalla.facciones[ev.nave.equipo]].acento)
+      particulas.emitir(ev.nave.pos, _v.set(0, 0, 0), colorDisparo, 10, 0.3)
+      sonido.reproducir('propulsor', ev.nave.pos, camara, 0.45)
     } else if (ev.tipo === 'flak') {
       particulas.emitir(ev.pos, _v.set(0, 0, 0), COLOR_DESTELLO, 7, 0.12, 1)
       for (let i = 0; i < 4; i++)
@@ -624,7 +628,8 @@ function procesarEventos(batalla) {
       partida?.entrada.limpiarMuertos()
     } else if (ev.tipo === 'batallonPerdido') {
       const b = ev.batallon
-      if (b.equipo === JUGADOR) partida?.hud.registrar(`Perdimos el batallón ${b.nombre}`, 'malo')
+      if (b.escuadrilla) partida?.hud.registrar(`${b.nombre} abatida${b.portanaves.viva ? ': el portanaves lanza reemplazos' : ''}`, b.equipo === JUGADOR ? 'malo' : 'bueno')
+      else if (b.equipo === JUGADOR) partida?.hud.registrar(`Perdimos el batallón ${b.nombre}`, 'malo')
       else partida?.hud.registrar(`Batallón enemigo ${b.nombre} destruido`, 'bueno')
     }
   }

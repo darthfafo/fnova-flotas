@@ -15,7 +15,7 @@ export const FACCIONES = {
     acento: 0x3fa9ff,
     acentoCss: '#3fa9ff',
     disparo: 0x7cc8ff,
-    modelos: { caza: 'challenger', corbeta: 'rylek-skiff', bombardero: 'omen', crucero: 'rylek-galley', acorazado: 'rylek-galleon' },
+    modelos: { caza: 'challenger', corbeta: 'rylek-skiff', bombardero: 'omen', crucero: 'rylek-galley', portanaves: 'rylek-brig', acorazado: 'rylek-galleon' },
     // Rasgo de batalla: aguantan más, pegan igual, se mueven un poco más lento.
     rasgo: {
       nombre: 'Disciplina del Crisol',
@@ -37,7 +37,7 @@ export const FACCIONES = {
     acento: 0xff4a2a,
     acentoCss: '#ff5a36',
     disparo: 0xffa040,
-    modelos: { caza: 'striker', corbeta: 'rlab-ranger', bombardero: 'spitfire', crucero: 'rlab-fragata', acorazado: 'pancake' },
+    modelos: { caza: 'striker', corbeta: 'rlab-ranger', bombardero: 'spitfire', crucero: 'rlab-fragata', portanaves: 'rlab-skycruiser', acorazado: 'pancake' },
     // Rasgo de batalla: pegan más y son más rápidos, con escudos más débiles.
     rasgo: {
       nombre: 'Tecnología prohibida',
@@ -103,7 +103,7 @@ export const TIPOS = {
     armas: [{ tipo: 'torpedo', daño: 120, cadencia: 2.2, alcance: 300, cono: 0.35 }],
     // Se alinea con su batallón y hace pasadas rectas; sale en una curva amplia.
     maniobra: 'pasada',
-    ventaja: { crucero: 2.2, acorazado: 2.1 },
+    ventaja: { crucero: 2.2, portanaves: 2.1, acorazado: 2.1 },
     rol: 'Torpedos lentos y devastadores contra naves capitales. Indefenso ante cazas.',
   },
   crucero: {
@@ -125,6 +125,28 @@ export const TIPOS = {
     ],
     ventaja: { caza: 1.6, corbeta: 1.5, bombardero: 1.25 },
     rol: 'Torretas de flak que barren Corbetas y Cazas. Necesita escolta contra los Bombarderos.',
+  },
+  portanaves: {
+    clave: 'portanaves',
+    nombre: 'Portanaves',
+    clase: CAPITAL,
+    porBatallon: 1,
+    costo: 1300,
+    largo: 72,
+    ataque: 60, escudo: 50, estructura: 340,
+    escudoMax: 1100, estructuraMax: 4800,
+    velocidad: 15, giro: 0.26, aceleracion: 4,
+    armas: [
+      { tipo: 'flak', daño: 7, cadencia: 0.6, alcance: 400, montaje: [-0.3, 0.15, 0] },
+      { tipo: 'flak', daño: 7, cadencia: 0.6, alcance: 400, montaje: [0.3, 0.15, 0] },
+    ],
+    // Hangar: lanza cazas a su propia escuadrilla (un batallón más que podés
+    // mandar), uno cada `intervalo` segundos hasta tener `capacidad` vivos,
+    // con `reserva` cazas en total (así dos portanaves no empatan para
+    // siempre). Los cazas lanzados no suman ni restan valor de flota.
+    hangar: { tipo: 'caza', capacidad: 6, intervalo: 7, primero: 3, reserva: 18 },
+    ventaja: {},
+    rol: 'Lanza cazas a su escuadrilla y repone las bajas (18 en el hangar). Armas débiles: protegelo de Bombarderos y Cruceros.',
   },
   acorazado: {
     clave: 'acorazado',
@@ -149,7 +171,7 @@ export const TIPOS = {
   },
 }
 
-export const ORDEN_TIPOS = ['caza', 'corbeta', 'bombardero', 'crucero', 'acorazado']
+export const ORDEN_TIPOS = ['caza', 'corbeta', 'bombardero', 'crucero', 'portanaves', 'acorazado']
 
 // Probabilidad de acierto según el arma y el tamaño del blanco.
 export const PUNTERIA = {

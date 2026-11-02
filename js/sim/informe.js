@@ -13,7 +13,8 @@ function valorNave(n) {
 
 export function armarInforme({ resultado, batalla, segundos, dificultad }) {
   const lados = [JUGADOR, ENEMIGO].map((equipo) => {
-    const naves = batalla.naves.filter((n) => n.equipo === equipo)
+    // Los cazas lanzados por portanaves no cuentan: son parte del portanaves.
+    const naves = batalla.naves.filter((n) => n.equipo === equipo && !n.lanzada)
     const porTipo = ORDEN_TIPOS.map((clave) => {
       const delTipo = naves.filter((n) => n.tipo.clave === clave)
       return { clave, nombre: delTipo[0]?.tipo.nombre, total: delTipo.length, quedan: delTipo.filter((n) => n.viva).length }
