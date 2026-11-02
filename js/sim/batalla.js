@@ -310,7 +310,9 @@ export class Batalla {
         this.moverNave(n, dt)
         this.dispararNave(n, dt)
         this.regenerar(n, dt)
-      } else if (n.malla && n.muerte < 4) {
+      } else if (n.malla !== undefined && n.muerte < 4) {
+        // La explosión final de una capital destroza las rocas de alrededor.
+        if (n.esCapital && n.muerte < 3 && n.muerte + dt >= 3) this.dañarRocasCerca(n.pos, n.radio * 4, 600)
         n.muerte += dt
         n.pos.addScaledVector(n.deriva, dt)
         n.quat.multiply(_q.setFromAxisAngle(n.ejeGiro, n.giroMuerte * dt))
@@ -590,7 +592,13 @@ export class Batalla {
     // Un asteroide en el medio se come el disparo.
     let contraRoca = null
     if (this.terreno.asteroides.length) {
-      const corte = this.terreno.bloquea(origen, apunta)
+      // Un disparo que acierta solo recorre hasta el blanco; uno que falla
+      // sigue de largo y puede terminar en una roca.
+      const fin =
+        impacta || proximidad
+          ? apunta
+          : _w.copy(apunta).sub(origen).normalize().multiplyScalar(arma.alcance * 1.2).add(origen)
+      const corte = this.terreno.bloquea(origen, fin)
       if (corte) {
         contraRoca = corte
         apunta.copy(origen).addScaledVector(_v.copy(apunta).sub(origen).normalize(), corte.distancia)
@@ -611,6 +619,7 @@ export class Batalla {
       vida: proximidad || contraRoca ? origen.distanceTo(apunta) / p.velocidad : arma.alcance / p.velocidad + 1.2,
       proximidad: proximidad && !contraRoca,
       contraRoca: !!contraRoca,
+      roca: contraRoca?.asteroide,
       teledirigido: arma.tipo === 'torpedo',
       tipo: arma.tipo,
     })
@@ -641,15 +650,30 @@ export class Batalla {
       p.pos.addScaledVector(p.dir, p.velocidad * dt)
       if (p.vida <= 0) {
         if (p.proximidad) this.detonarFlak(p)
-        else if (p.contraRoca) this.eventos.push({ tipo: 'impactoRoca', pos: p.pos.clone(), arma: p.tipo })
+        else if (p.contraRoca && !p.roca.destruido) {
+          this.eventos.push({ tipo: 'impactoRoca', pos: p.pos.clone(), arma: p.tipo })
+          // Torpedos y cañonazos golpean más fuerte la roca.
+          const fuerza = p.tipo === 'torpedo' || p.tipo === 'cañon' ? 2 : 1
+          if (this.terreno.dañar(p.roca, p.daño * fuerza)) this.eventos.push({ tipo: 'rocaDestruida', asteroide: p.roca })
+        }
         lista.splice(i, 1)
       }
+    }
+  }
+
+  // Daño en área a las rocas chicas (explosiones cerca del cinturón).
+  dañarRocasCerca(pos, radio, daño) {
+    for (const a of [...this.terreno.asteroides]) {
+      const d = a.pos.distanceTo(pos) - a.radio
+      if (d > radio) continue
+      if (this.terreno.dañar(a, daño * (1 - Math.max(0, d) / radio))) this.eventos.push({ tipo: 'rocaDestruida', asteroide: a })
     }
   }
 
   detonarFlak(p) {
     const RADIO = 14
     this.eventos.push({ tipo: 'flak', pos: p.pos.clone(), equipo: p.autor.equipo })
+    if (this.terreno.asteroides.length) this.dañarRocasCerca(p.pos, RADIO, p.daño * 0.5)
     for (const o of this.naves) {
       if (!o.viva || o.equipo === p.autor.equipo || o.esCapital) continue
       const d = o.pos.distanceTo(p.pos)
@@ -686,6 +710,7 @@ export class Batalla {
     this.estadisticas[o.equipo].perdidas++
     this.estadisticas[autor.equipo].destruidas++
     this.eventos.push({ tipo: 'destruida', nave: o })
+    if (!o.esCapital && this.terreno.asteroides.length) this.dañarRocasCerca(o.pos, 30, 60)
     if (!o.batallon.viva) this.eventos.push({ tipo: 'batallonPerdido', batallon: o.batallon })
   }
 

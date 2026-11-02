@@ -43,7 +43,7 @@ const PASOS = [
   },
   {
     titulo: 'Contras y terreno',
-    texto: 'Corbeta › Caza › Bombardero › Crucero y Acorazado; el Crucero barre Corbetas y Cazas. Los asteroides frenan los disparos y las nebulosas esconden naves. Tus naves chicas dañadas se reparan cerca de tus capitales. <b>Esc</b> muestra todos los controles.',
+    texto: 'Corbeta › Caza › Bombardero › Crucero y Acorazado; el Crucero barre Corbetas y Cazas. Los asteroides frenan los disparos (los chicos se rompen) y las nebulosas esconden naves. Tus naves chicas dañadas se reparan cerca de tus capitales. <b>Esc</b> muestra todos los controles.',
     boton: 'A la batalla',
   },
 ]

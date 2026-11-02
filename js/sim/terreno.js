@@ -5,6 +5,8 @@
 import * as THREE from 'three'
 import { semilla } from '../motor/escena.js'
 
+export const RADIO_DESTRUCTIBLE = 70
+
 export const MAPAS = {
   abierto: { nombre: 'Espacio abierto', corto: 'Abierto', descripcion: 'Sin obstáculos: gana la mejor flota.' },
   asteroides: { nombre: 'Cinturón de asteroides', corto: 'Asteroides', descripcion: 'Rocas entre las flotas que frenan los disparos.' },
@@ -56,10 +58,23 @@ export class Terreno {
     this.asteroides.push({
       pos,
       radio,
+      // Las rocas chicas aguantan una cantidad de daño y se rompen; las
+      // grandes son indestructibles (siempre queda algo de terreno).
+      vida: radio <= RADIO_DESTRUCTIBLE ? radio * 5 : Infinity,
       eje: new THREE.Vector3(azar() - 0.5, azar() - 0.5, azar() - 0.5).normalize(),
       giro: (azar() - 0.5) * (radio > 100 ? 0.04 : 0.25),
       forma: Math.floor(azar() * 4),
     })
+  }
+
+  // Resta vida a una roca; devuelve true si se rompió (y la saca del mapa).
+  dañar(asteroide, daño) {
+    if (asteroide.destruido || asteroide.vida === Infinity) return false
+    asteroide.vida -= daño
+    if (asteroide.vida > 0) return false
+    asteroide.destruido = true
+    this.asteroides.splice(this.asteroides.indexOf(asteroide), 1)
+    return true
   }
 
   nebulosaEn(pos) {

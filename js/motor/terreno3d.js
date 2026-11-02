@@ -211,7 +211,9 @@ export class Terreno3D {
       for (let i = 0; i < lista.length; i++) {
         const a = lista[i]
         a.quat.multiply(this._q.setFromAxisAngle(a.eje, a.giro * dt))
-        m.setMatrixAt(i, this._m.compose(a.pos, a.quat, new THREE.Vector3(a.radio, a.radio, a.radio)))
+        // Una roca rota se achica a cero (la instancia queda, pero no se ve).
+        const r = a.destruido ? 0 : a.radio
+        m.setMatrixAt(i, this._m.compose(a.pos, a.quat, new THREE.Vector3(r, r, r)))
       }
       m.instanceMatrix.needsUpdate = true
     }

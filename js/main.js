@@ -289,6 +289,8 @@ const _n = new THREE.Vector3()
 const colorDisparo = new THREE.Color()
 const COLOR_ESTELA_TORPEDO = new THREE.Color(0.5, 0.3, 0.12)
 const COLOR_POLVO = new THREE.Color(0.45, 0.38, 0.3)
+const COLOR_FRAGMENTO = new THREE.Color(0.5, 0.42, 0.33)
+const COLOR_NUBE_POLVO = new THREE.Color(0.16, 0.13, 0.1)
 
 function procesarEventos(batalla) {
   for (const ev of batalla.eventos) {
@@ -305,6 +307,22 @@ function procesarEventos(batalla) {
       particulas.chispas(ev.pos, _n.randomDirection(), COLOR_POLVO, 6, 25)
       if (ev.arma === 'torpedo' || ev.arma === 'cañon') particulas.explosion(ev.pos, 2, COLOR_FUEGO, 8)
       else particulas.emitir(ev.pos, _v.set(0, 0, 0), COLOR_POLVO, 6, 0.8, 1.5)
+    } else if (ev.tipo === 'rocaDestruida') {
+      const a = ev.asteroide
+      // Polvo, brasas y fragmentos de roca que quedan flotando.
+      particulas.explosion(a.pos, a.radio * 0.18, COLOR_POLVO, 40)
+      for (let i = 0; i < 40; i++) {
+        _v.randomDirection().multiplyScalar(a.radio * (0.3 + Math.random() * 0.9))
+        particulas.emitir(_n.copy(a.pos).addScaledVector(_v, 0.5), _v, COLOR_FRAGMENTO, a.radio * (0.1 + Math.random() * 0.15), 4 + Math.random() * 3, -0.3)
+      }
+      // Nube de polvo que se expande lento.
+      for (let i = 0; i < 24; i++) {
+        _v.randomDirection().multiplyScalar(a.radio * (0.1 + Math.random() * 0.3))
+        particulas.emitir(_n.copy(a.pos).addScaledVector(_v, 1.5), _v, COLOR_NUBE_POLVO, a.radio * (0.35 + Math.random() * 0.3), 3 + Math.random() * 2.5, 1.8)
+      }
+      sonido.reproducir('explosion', a.pos, camara, 1)
+      orbital.sacudir(Math.max(0, 1 - a.pos.distanceTo(camara.position) / 1200) * a.radio * 0.15)
+      partida?.hud.registrar('Un asteroide quedó hecho pedazos')
     } else if (ev.tipo === 'impacto') {
       const n = ev.nave
       _n.copy(ev.pos).sub(n.pos).normalize()
