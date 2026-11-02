@@ -12,6 +12,8 @@ import { Batalla, JUGADOR, ENEMIGO } from './sim/batalla.js'
 import { ComandanteIA } from './sim/ia.js'
 import { Terreno, MAPAS } from './sim/terreno.js'
 import { armarInforme } from './sim/informe.js'
+import { Cuenta } from './red/cuenta.js'
+import { Salon } from './ui/salon.js'
 import { Terreno3D } from './motor/terreno3d.js'
 import { Tutorial, tutorialVisto } from './ui/tutorial.js'
 import { Entrada } from './entrada.js'
@@ -41,6 +43,9 @@ const escudos = new Escudos(escena, 24)
 const ondas = new Ondas(escena, 12)
 const sonido = new Sonido()
 const musica = new Musica(sonido)
+const cuenta = new Cuenta()
+const salon = new Salon(cuenta)
+cuenta.iniciar()
 const ESTELAS = calidadInicial === 'baja' ? 0.5 : 1 // fracción de cuadros que emiten estela
 window.addEventListener('resize', () => {
   particulas.puntos.material.uniforms.escala.value = escalaPuntos()
@@ -174,6 +179,9 @@ window.addEventListener('keydown', (e) => {
   if (e.key === 'Escape' && !panelSonido.hidden) {
     e.stopImmediatePropagation()
     cerrarPanelSonido()
+  } else if (e.key === 'Escape' && document.getElementById('pantalla-cuenta').classList.contains('visible')) {
+    e.stopImmediatePropagation()
+    salon.cerrarCuenta()
   }
 }, true)
 refrescarPanelSonido()
@@ -249,6 +257,7 @@ function iniciarBatalla(config, opciones = {}) {
   sonido.ambiente(true)
   refrescarPanelSonido()
   document.getElementById('btn-sonido-menu').hidden = true
+  document.getElementById('btn-cuenta').hidden = true
   const faccionEnemiga = config.faccion === 'guardianes' ? 'inquisidores' : 'guardianes'
   const flotaRival = flotaEnemiga(config.dificultad, config.presupuesto)
   const tipoMapa = config.mapa in MAPAS ? config.mapa : Object.keys(MAPAS)[Math.floor(Math.random() * 4)]
@@ -297,6 +306,7 @@ function iniciarBatalla(config, opciones = {}) {
   }
   pausa = false
   if (opciones.tutorial || !tutorialVisto()) partida.tutorial = new Tutorial({ orbital, ia })
+  partida.esTutorial = !!opciones.tutorial
 
   // Cámara detrás de la flota propia, mirando hacia el enemigo.
   const centro = new THREE.Vector3()
@@ -326,6 +336,7 @@ function terminarBatalla() {
   partida.hud.destruir()
   partida = null
   document.getElementById('btn-sonido-menu').hidden = false
+  document.getElementById('btn-cuenta').hidden = false
   proyectiles.dibujar([])
   motores.dibujar([])
   if (sensores.activo) alternarSensores()
@@ -609,10 +620,13 @@ function cuadro() {
           segundos: p.batalla.tiempo,
           dificultad: p.config.dificultad,
         })
-        const mapa = MAPAS[p.batalla.terreno.tipo].nombre
+        const tipoMapa = p.batalla.terreno.tipo
         const config = p.config
+        const esTutorial = p.esTutorial
         terminarBatalla()
-        menus.mostrarFin(informe, mapa, config)
+        menus.mostrarFin(informe, MAPAS[tipoMapa].nombre, config)
+        document.getElementById('fin-ranking').innerHTML = esTutorial ? '<span>Las batallas del tutorial no entran al Salón de la Fama.</span>' : ''
+        if (!esTutorial) salon.alTerminarBatalla({ informe, config, mapa: tipoMapa, faccion: config.faccion })
       }
     }
   } else if (!p) {

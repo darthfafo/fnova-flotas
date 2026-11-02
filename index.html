@@ -49,6 +49,7 @@
       <p class="sub" id="lema-portada">Tres siglos después de la Quema, la guerra vuelve a las estrellas.</p>
       <div class="botonera vertical" id="botones-titulo">
         <button class="btn grande" data-accion="nueva">Jugar</button>
+        <button class="btn" data-accion="salon">Salón de la Fama</button>
         <button class="btn" data-accion="tutorial">Tutorial</button>
         <div class="fila-botones">
           <button class="btn" data-accion="prologo">Prólogo</button>
@@ -119,6 +120,7 @@
         <div class="panel lado" id="fin-lado-1"></div>
       </div>
       <div class="informe-destacado" id="fin-destacado"></div>
+      <div class="informe-ranking" id="fin-ranking"></div>
       <div class="botonera">
         <button class="btn grande" data-accion="revancha">Revancha</button>
         <button class="btn" data-accion="cambiar-flota">Cambiar flota</button>
@@ -177,6 +179,30 @@
   </div>
 
   <aside class="panel tutorial" id="tutorial" hidden></aside>
+
+  <!-- Cuenta de comandante: botón flotante en los menús -->
+  <button class="btn chico btn-cuenta" id="btn-cuenta" data-accion="cuenta">Iniciar sesión</button>
+
+  <section id="pantalla-cuenta" class="pantalla superpuesta">
+    <div class="panel ventana-cuenta">
+      <button class="btn chico cerrar" data-accion="cerrar-cuenta">✕</button>
+      <div id="cuenta-contenido"></div>
+    </div>
+  </section>
+
+  <section id="pantalla-salon" class="pantalla">
+    <div class="salon">
+      <header class="armado-cab">
+        <button class="btn chico" data-accion="volver-titulo">‹ Volver</button>
+        <h2>Salón de la Fama</h2>
+        <div></div>
+      </header>
+      <p class="salon-sub">La mejor victoria de cada comandante, por dificultad.</p>
+      <div class="selector salon-tabs" id="salon-tabs"></div>
+      <div class="panel salon-tabla" id="salon-tabla"></div>
+      <div class="salon-pie" id="salon-pie"></div>
+    </div>
+  </section>
 
   <!-- Sonido: botón flotante en los menús (en batalla está en la barra superior) -->
   <button class="btn chico btn-sonido-menu" id="btn-sonido-menu" data-accion="panel-sonido" title="Música y efectos">♪ Sonido</button>

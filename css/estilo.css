@@ -548,3 +548,46 @@ h1 { margin: 0; font-size: clamp(3rem, 9vw, 6rem); letter-spacing: 0.3em; paddin
   .puntaje-total { font-size: 2.2rem; margin-bottom: 6px; }
   .tabla-tipos { font-size: 0.8rem; }
 }
+
+/* --- Cuenta y Salón de la Fama ------------------------------------------ */
+.btn-cuenta { position: fixed; top: 12px; left: 14px; z-index: 25; display: flex; align-items: center; gap: 8px; }
+.btn-cuenta.conectado { color: #fff; border-color: var(--borde-fuerte); }
+.rombo { display: inline-block; width: 8px; height: 8px; transform: rotate(45deg); margin-right: 8px; vertical-align: middle; }
+.btn-cuenta .rombo { margin-right: 0; }
+#pantalla-cuenta { z-index: 35; }
+.ventana-cuenta { width: min(400px, 92vw); padding: 22px 24px; position: relative; }
+.ventana-cuenta .cerrar { position: absolute; top: 10px; right: 10px; }
+.ventana-cuenta .encabezado { min-width: 0; margin-bottom: 14px; font-size: 1.1rem; }
+.tabs-cuenta { margin-bottom: 14px; }
+.form-cuenta { display: flex; flex-direction: column; gap: 12px; }
+.form-cuenta label { display: flex; flex-direction: column; gap: 4px; text-transform: uppercase; letter-spacing: 0.12em; font-size: 0.75rem; color: var(--texto-tenue); }
+.form-cuenta input, .form-cuenta select {
+  font: inherit; font-size: 1rem; letter-spacing: 0.02em; text-transform: none; color: #fff;
+  background: rgba(4, 8, 14, 0.8); border: 1px solid var(--borde); padding: 8px 10px; outline: none;
+}
+.form-cuenta input:focus, .form-cuenta select:focus { border-color: var(--acento); }
+.form-cuenta .btn.grande { margin-top: 4px; }
+.error-cuenta { color: var(--peligro); font-size: 0.9rem; min-height: 1.1em; }
+.ventana-cuenta .nota { margin-top: 12px; }
+.perfil-nombre { font-family: 'Cinzel', serif; font-size: 2rem; font-weight: 800; color: #fff; text-align: center; }
+.perfil-faccion { text-align: center; text-transform: uppercase; letter-spacing: 0.25em; font-weight: 700; }
+.informe-ranking { display: flex; justify-content: center; align-items: center; gap: 10px; flex-wrap: wrap; min-height: 1.6em; color: var(--texto-tenue); }
+.informe-ranking b { color: #f2c27e; font-size: 1.1rem; }
+#pantalla-salon.visible { justify-content: flex-start; padding-top: 18px; }
+.salon { width: min(980px, 100%); display: flex; flex-direction: column; gap: 10px; }
+.salon-sub { text-align: center; color: var(--texto-tenue); margin: 0; }
+.salon-tabs { max-width: 420px; margin: 0 auto; width: 100%; }
+.salon-tabla { padding: 6px 10px; overflow-x: auto; }
+.salon-vacio { padding: 30px; text-align: center; color: var(--texto-tenue); }
+.tabla-salon { width: 100%; border-collapse: collapse; font-size: 0.92rem; white-space: nowrap; }
+.tabla-salon th { text-align: left; font-size: 0.72rem; text-transform: uppercase; letter-spacing: 0.12em; color: var(--texto-tenue); font-weight: 600; padding: 6px 8px; }
+.tabla-salon td { padding: 7px 8px; border-top: 1px solid rgba(150, 195, 230, 0.08); }
+.tabla-salon .num { text-align: right; }
+.tabla-salon .puesto { font-weight: 800; width: 36px; color: var(--texto-tenue); }
+.tabla-salon .puntos { font-weight: 800; color: #fff; }
+.tabla-salon .podio.p1 .puesto { color: #ffd76a; }
+.tabla-salon .podio.p2 .puesto { color: #d8e2ec; }
+.tabla-salon .podio.p3 .puesto { color: #e0a070; }
+.tabla-salon tr.propia td { background: color-mix(in srgb, var(--acento) 16%, transparent); }
+.salon-pie { display: flex; justify-content: center; align-items: center; gap: 10px; color: var(--texto-tenue); }
+.salon-pie b { color: #f2c27e; }
