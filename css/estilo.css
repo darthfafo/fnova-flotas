@@ -647,3 +647,4 @@ body:has(#pantalla-titulo.visible) .barra-portada { display: flex; }
   .pie-portada { bottom: 8px; }
 }
 @media (max-width: 640px) { .gancho { grid-template-columns: 1fr; } }
+.portada .marca { text-transform: uppercase; letter-spacing: 0.45em; padding-left: 0.45em; margin-bottom: 4px; }
