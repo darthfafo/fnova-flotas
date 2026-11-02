@@ -129,7 +129,7 @@
       </div>
       <div class="botonera chica">
         <span class="reloj" id="hud-reloj">00:00</span>
-        <button class="btn chico" data-accion="sonido" id="btn-sonido" title="Activar o silenciar el sonido">Sonido</button>
+        <button class="btn chico" data-accion="panel-sonido" id="btn-sonido" title="Música y efectos">Sonido</button>
         <button class="btn chico" data-accion="sensores" title="Vista táctica (Espacio)">Sensores</button>
         <button class="btn chico" data-accion="pausa-tactica" id="btn-pausa-tactica" title="Congela la batalla y te deja dar órdenes (P)">❚❚ Pausa</button>
         <button class="btn chico" data-accion="velocidad" id="btn-velocidad" title="Velocidad normal o doble (R)">×1</button>
@@ -168,6 +168,15 @@
   </div>
 
   <aside class="panel tutorial" id="tutorial" hidden></aside>
+
+  <!-- Sonido: botón flotante en los menús (en batalla está en la barra superior) -->
+  <button class="btn chico btn-sonido-menu" id="btn-sonido-menu" data-accion="panel-sonido" title="Música y efectos">♪ Sonido</button>
+  <div class="panel panel-sonido" id="panel-sonido" hidden>
+    <div class="fila-titulo">Sonido</div>
+    <label class="control-volumen"><span>Música</span><input type="range" min="0" max="100" step="5" id="vol-musica" /><b id="val-musica"></b></label>
+    <label class="control-volumen"><span>Efectos</span><input type="range" min="0" max="100" step="5" id="vol-efectos" /><b id="val-efectos"></b></label>
+    <button class="btn chico" id="btn-silencio">Silenciar todo</button>
+  </div>
 
   <div id="ayuda" class="pantalla superpuesta">
     <div class="panel ayuda">
@@ -209,6 +218,7 @@
       <p class="ayuda-nota"><b>Terreno:</b> los asteroides frenan los disparos (sirven de cobertura, pero los chicos se rompen si reciben mucho fuego) y las nebulosas esconden a las naves que están adentro hasta que disparan o las tenés muy cerca. <b>Reparación:</b> tus naves chicas dañadas se arreglan cerca de tus capitales si no reciben fuego.</p>
       <div class="botonera" id="ayuda-botones">
         <button class="btn grande" data-accion="cerrar-ayuda">Continuar</button>
+        <button class="btn" data-accion="panel-sonido">Sonido</button>
         <button class="btn" data-accion="abandonar" id="btn-abandonar" hidden>Abandonar batalla</button>
       </div>
     </div>

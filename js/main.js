@@ -112,10 +112,8 @@ document.body.addEventListener('click', (e) => {
   if (a === 'sensores' && partida) alternarSensores()
   if (a === 'pausa-tactica' && partida) alternarPausaTactica()
   if (a === 'velocidad' && partida) alternarVelocidad()
-  if (a === 'sonido') {
-    sonido.iniciar()
-    e.target.closest('[data-accion]').classList.toggle('activo', sonido.alternar())
-  }
+  if (a === 'panel-sonido') alternarPanelSonido(e.target.closest('[data-accion]'))
+  else if (!e.target.closest('#panel-sonido')) cerrarPanelSonido()
 })
 window.addEventListener('keydown', (e) => {
   if (e.key === 'Escape' && document.getElementById('ayuda').classList.contains('visible')) {
@@ -128,6 +126,56 @@ document.getElementById('hud-comandos').addEventListener('click', (e) => {
   if (!b || !partida) return
   partida.entrada.comando({ cmd: b.dataset.cmd, formacion: b.dataset.formacion, tactica: b.dataset.tactica })
 })
+
+// --- Panel de sonido ---------------------------------------------------------
+// Música y efectos por separado, más "silenciar todo". Se abre desde la barra
+// de la batalla, el botón flotante de los menús o el menú de pausa.
+
+const panelSonido = document.getElementById('panel-sonido')
+
+function alternarPanelSonido(boton) {
+  if (!panelSonido.hidden) return cerrarPanelSonido()
+  refrescarPanelSonido()
+  panelSonido.hidden = false
+  // Se ubica debajo del botón que lo abrió.
+  const r = boton.getBoundingClientRect()
+  panelSonido.style.top = `${Math.min(r.bottom + 6, innerHeight - panelSonido.offsetHeight - 8)}px`
+  panelSonido.style.left = `${Math.max(8, Math.min(r.right - panelSonido.offsetWidth, innerWidth - panelSonido.offsetWidth - 8))}px`
+}
+
+function cerrarPanelSonido() {
+  panelSonido.hidden = true
+}
+
+function refrescarPanelSonido() {
+  for (const canal of ['musica', 'efectos']) {
+    const v = Math.round(sonido.volumenes[canal] * 100)
+    document.getElementById(`vol-${canal}`).value = v
+    document.getElementById(`val-${canal}`).textContent = `${v}%`
+  }
+  const silencio = document.getElementById('btn-silencio')
+  silencio.textContent = sonido.activo ? 'Silenciar todo' : 'Activar sonido'
+  silencio.classList.toggle('activo', !sonido.activo)
+  for (const id of ['btn-sonido', 'btn-sonido-menu']) document.getElementById(id).classList.toggle('silenciado', !sonido.activo)
+}
+
+for (const canal of ['musica', 'efectos'])
+  document.getElementById(`vol-${canal}`).addEventListener('input', (e) => {
+    sonido.cambiarVolumen(canal, Number(e.target.value) / 100)
+    document.getElementById(`val-${canal}`).textContent = `${e.target.value}%`
+  })
+document.getElementById('btn-silencio').addEventListener('click', () => {
+  sonido.iniciar()
+  sonido.alternar()
+  refrescarPanelSonido()
+})
+window.addEventListener('keydown', (e) => {
+  if (e.key === 'Escape' && !panelSonido.hidden) {
+    e.stopImmediatePropagation()
+    cerrarPanelSonido()
+  }
+}, true)
+refrescarPanelSonido()
 
 // --- Armado de la batalla ----------------------------------------------------
 
@@ -198,7 +246,8 @@ function iniciarBatalla(config, opciones = {}) {
   orbital.suavidad = 6
   sonido.iniciar()
   sonido.ambiente(true)
-  document.getElementById('btn-sonido').classList.toggle('activo', sonido.activo)
+  refrescarPanelSonido()
+  document.getElementById('btn-sonido-menu').hidden = true
   const faccionEnemiga = config.faccion === 'guardianes' ? 'inquisidores' : 'guardianes'
   const flotaRival = flotaEnemiga(config.dificultad, config.presupuesto)
   const tipoMapa = config.mapa in MAPAS ? config.mapa : Object.keys(MAPAS)[Math.floor(Math.random() * 4)]
@@ -275,6 +324,7 @@ function terminarBatalla() {
   sonido.ambiente(false)
   partida.hud.destruir()
   partida = null
+  document.getElementById('btn-sonido-menu').hidden = false
   proyectiles.dibujar([])
   motores.dibujar([])
   if (sensores.activo) alternarSensores()

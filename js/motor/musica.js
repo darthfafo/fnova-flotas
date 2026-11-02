@@ -39,10 +39,10 @@ export class Musica {
     const filtroEco = this.ctx.createBiquadFilter()
     filtroEco.type = 'lowpass'
     filtroEco.frequency.value = 1800
-    this.salida.connect(this.sonido.maestro)
+    this.salida.connect(this.sonido.busMusica)
     this.salida.connect(eco)
     eco.connect(filtroEco).connect(realimentacion).connect(eco)
-    filtroEco.connect(this.sonido.maestro)
+    filtroEco.connect(this.sonido.busMusica)
     this.eco = eco
     this.proximo = this.ctx.currentTime + 0.1
     this.compas = 0

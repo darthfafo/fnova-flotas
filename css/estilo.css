@@ -487,3 +487,12 @@ h1 { margin: 0; font-size: clamp(3rem, 9vw, 6rem); letter-spacing: 0.3em; paddin
 .portada [data-accion="nueva"]:hover { background: linear-gradient(180deg, rgba(190, 95, 35, 0.85), rgba(100, 40, 14, 0.9)); box-shadow: 0 0 34px rgba(255, 150, 70, 0.55); }
 .encabezado, .armado-cab h2, #fin-titulo, .tarjeta-faccion h3 { font-family: 'Cinzel', serif; }
 #fin-titulo { letter-spacing: 0.12em; background: linear-gradient(180deg, #fff3dc, #f2c27e 50%, #c26a2e); -webkit-background-clip: text; background-clip: text; color: transparent; }
+
+/* --- Panel de sonido ---------------------------------------------------- */
+.btn-sonido-menu { position: fixed; top: 12px; right: 14px; z-index: 25; }
+.btn.silenciado { color: var(--texto-tenue); text-decoration: line-through; }
+.panel-sonido { position: fixed; z-index: 40; width: 250px; padding: 12px 14px; display: flex; flex-direction: column; gap: 10px; }
+.panel-sonido .fila-titulo { margin: 0; }
+.control-volumen { display: grid; grid-template-columns: 64px 1fr 40px; align-items: center; gap: 8px; font-weight: 600; letter-spacing: 0.06em; text-transform: uppercase; font-size: 0.8rem; }
+.control-volumen b { text-align: right; font-variant-numeric: tabular-nums; color: var(--texto-tenue); }
+.control-volumen input { width: 100%; accent-color: var(--ambar); cursor: pointer; }

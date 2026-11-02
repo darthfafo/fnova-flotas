@@ -12,6 +12,22 @@ export class Sonido {
     this.activo = leer('sonido', 'si') === 'si'
     this.voces = {}
     this.escala = 1 // volumen de los efectos (más bajo en la portada)
+    // Volúmenes que elige el jugador, 0 a 1 (se recuerdan entre partidas).
+    this.volumenes = {
+      musica: Number(leer('volMusica', '0.8')),
+      efectos: Number(leer('volEfectos', '0.8')),
+    }
+  }
+
+  // Dos canales con su propio volumen: música (y el zumbido de fondo de la
+  // batalla) y efectos. Los dos pasan por el maestro (silenciar todo).
+  cambiarVolumen(canal, valor) {
+    this.volumenes[canal] = valor
+    try {
+      localStorage.setItem(canal === 'musica' ? 'volMusica' : 'volEfectos', String(valor))
+    } catch {}
+    const bus = canal === 'musica' ? this.busMusica : this.busEfectos
+    if (bus) bus.gain.setTargetAtTime(valor, this.ctx.currentTime, 0.05)
   }
 
   // Los navegadores solo permiten arrancar el audio después de un gesto.
@@ -29,6 +45,12 @@ export class Sonido {
     comp.threshold.value = -18
     comp.ratio.value = 6
     this.maestro.connect(comp).connect(this.ctx.destination)
+    this.busMusica = this.ctx.createGain()
+    this.busMusica.gain.value = this.volumenes.musica
+    this.busMusica.connect(this.maestro)
+    this.busEfectos = this.ctx.createGain()
+    this.busEfectos.gain.value = this.volumenes.efectos
+    this.busEfectos.connect(this.maestro)
 
     // Ruido blanco reutilizable.
     const largo = this.ctx.sampleRate * 2
@@ -64,7 +86,7 @@ export class Sonido {
         o.start()
         return o
       })
-      filtro.connect(g).connect(this.maestro)
+      filtro.connect(g).connect(this.busMusica)
       this.drone = { g, oscs }
     } else if (!encender && this.drone) {
       const { g, oscs } = this.drone
@@ -97,7 +119,7 @@ export class Sonido {
     g.gain.setValueAtTime(0.0001, ahora)
     g.gain.exponentialRampToValueAtTime(pico, ahora + 0.005)
     g.gain.exponentialRampToValueAtTime(0.0001, ahora + dur)
-    g.connect(this.maestro)
+    g.connect(this.busEfectos)
     return g
   }
 
