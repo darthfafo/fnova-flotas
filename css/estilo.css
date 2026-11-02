@@ -662,11 +662,14 @@ html.tactil .btn { -webkit-user-select: none; user-select: none; }
 
 /* Aviso para girar el teléfono durante la batalla. */
 .girar-telefono { display: none; }
-@media (orientation: portrait) {
-  html.tactil body.en-batalla .girar-telefono {
+/* En teléfonos (no tablets) el juego es solo horizontal: en vertical el
+   aviso tapa todo, en cualquier pantalla. */
+@media (orientation: portrait) and (max-width: 600px) {
+  html.tactil .girar-telefono {
     display: flex; position: fixed; inset: 0; z-index: 60; flex-direction: column; align-items: center; justify-content: center; gap: 12px;
     background: rgba(2, 3, 8, 0.94); color: var(--texto); text-align: center; padding: 30px;
   }
+  html.tactil .girar-telefono { z-index: 100; }
   .girar-telefono div { font-size: 3.4rem; color: #f2c27e; animation: girar 2.4s ease-in-out infinite; }
   .girar-telefono p { font-family: 'Cinzel', serif; letter-spacing: 0.08em; font-size: 1.1rem; margin: 0; }
 }
@@ -800,3 +803,4 @@ html.tactil .grupo-comandos:not(.solo-tactil):not(.solo-mover) .btn.comando b { 
   .armado-cuerpo, .armado-cuerpo > .panel { height: auto; max-height: none; flex: none; min-height: 0; }
   .lista-tipos .tipo-fila { flex: none; }
 }
+.girar-telefono small { color: var(--texto-tenue); letter-spacing: 0.08em; }

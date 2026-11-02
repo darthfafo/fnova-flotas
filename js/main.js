@@ -93,6 +93,14 @@ menus.alSalirMulti = () => multijugador.salir(true)
 const intro = new Intro({
   musica,
   alComenzar: () => {
+    // En teléfonos: pantalla completa y orientación horizontal fija. Solo
+    // Android lo permite (y solo con pantalla completa); en iPhone queda el
+    // aviso de girar el teléfono.
+    if (ES_TACTIL && Math.min(screen.width, screen.height) < 600)
+      document.documentElement
+        .requestFullscreen?.({ navigationUI: 'hide' })
+        .then(() => screen.orientation?.lock?.('landscape'))
+        .catch(() => {})
     sonido.iniciar()
     sonido.escala = 0.3 // en la portada los efectos quedan de fondo de la música
   },
