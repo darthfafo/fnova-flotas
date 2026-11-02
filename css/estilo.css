@@ -591,3 +591,9 @@ h1 { margin: 0; font-size: clamp(3rem, 9vw, 6rem); letter-spacing: 0.3em; paddin
 .tabla-salon tr.propia td { background: color-mix(in srgb, var(--acento) 16%, transparent); }
 .salon-pie { display: flex; justify-content: center; align-items: center; gap: 10px; color: var(--texto-tenue); }
 .salon-pie b { color: #f2c27e; }
+/* El botón de cuenta solo en la portada; las demás pantallas dejan lugar
+   arriba para el botón flotante de sonido. */
+.btn-cuenta { display: none; }
+body:has(#pantalla-titulo.visible) .btn-cuenta:not([hidden]) { display: flex; }
+.pantalla-armado.visible { padding-top: 48px; }
+#pantalla-salon.visible { padding-top: 48px; }
