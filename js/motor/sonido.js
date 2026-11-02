@@ -11,6 +11,7 @@ export class Sonido {
     this.ctx = null
     this.activo = leer('sonido', 'si') === 'si'
     this.voces = {}
+    this.escala = 1 // volumen de los efectos (más bajo en la portada)
   }
 
   // Los navegadores solo permiten arrancar el audio después de un gesto.
@@ -81,7 +82,7 @@ export class Sonido {
 
   reproducir(tipo, pos, camara, fuerza = 1) {
     if (!this.ctx || !this.activo || this.ctx.state !== 'running') return
-    const v = this.volumen(pos, camara) * fuerza
+    const v = this.volumen(pos, camara) * fuerza * this.escala
     if (v < 0.02) return
     const ahora = this.ctx.currentTime
     const lista = (this.voces[tipo] ??= [])

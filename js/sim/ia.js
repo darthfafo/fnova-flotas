@@ -23,8 +23,13 @@ const CONFIG = {
 }
 
 export class ComandanteIA {
-  constructor(batalla, dificultad) {
+  // equipo: el bando que maneja (ENEMIGO en una partida; los dos en la
+  // batalla de fondo de la portada).
+  constructor(batalla, dificultad, equipo = ENEMIGO) {
     this.batalla = batalla
+    this.equipo = equipo
+    // Hacia dónde está el rival y hacia dónde queda "atrás" para este bando.
+    this.frente = equipo === ENEMIGO ? 1 : -1
     this.config = DIFICULTADES[dificultad]
     this.tactica = CONFIG[dificultad]
     this.reloj = 4 // unos segundos de calma antes de avanzar
@@ -35,7 +40,7 @@ export class ComandanteIA {
   }
 
   propios() {
-    return this.batalla.batallones.filter((x) => x.equipo === ENEMIGO && x.viva)
+    return this.batalla.batallones.filter((x) => x.equipo === this.equipo && x.viva)
   }
 
   centroDe(lista) {
@@ -67,7 +72,7 @@ export class ComandanteIA {
 
     const propios = this.propios()
     if (!propios.length) return
-    const visibles = b.enemigosDe(ENEMIGO, true)
+    const visibles = b.enemigosDe(this.equipo, true)
     if (visibles.length) this.ultimaPosicionRival = this.centroDe(visibles)
 
     if (this.fase === 'despliegue') {
@@ -125,7 +130,7 @@ export class ComandanteIA {
   }
 
   avanzar(lista) {
-    const destino = this.ultimaPosicionRival ?? new THREE.Vector3(0, 0, 900)
+    const destino = this.ultimaPosicionRival ?? new THREE.Vector3(0, 0, 900 * this.frente)
     const linea = lista.filter((p) => this.roles.get(p) !== 'flanco' || p.flanco === 'hecho')
     const flancos = lista.filter((p) => this.roles.get(p) === 'flanco' && p.flanco !== 'hecho')
     if (linea.length) this.batalla.ordenarMover(linea, destino.clone(), 'garra')
@@ -134,10 +139,10 @@ export class ComandanteIA {
 
   // Rodeo amplio hacia el costado más cercano del rival.
   flanquear(p) {
-    const objetivo = this.ultimaPosicionRival ?? new THREE.Vector3(0, 0, 900)
+    const objetivo = this.ultimaPosicionRival ?? new THREE.Vector3(0, 0, 900 * this.frente)
     const c = p.centro(_a)
     const lado = c.x >= objetivo.x ? 1 : -1
-    const punto = objetivo.clone().add(new THREE.Vector3(lado * 750, 80, -150))
+    const punto = objetivo.clone().add(new THREE.Vector3(lado * 750, 80, -150 * this.frente))
     this.batalla.ordenarMover([p], punto)
     p.tactica = 'evasiva' // no se engancha en el camino
     p.flanco = 'en camino'
@@ -158,7 +163,9 @@ export class ComandanteIA {
     // Las capitales no se retiran si no hay a dónde: pelean hasta el final.
     if (salud.estructura > umbral || (p.tipo.clase === 'capital' && capitales.length <= 1)) return false
     const refugio = capitales.find((c) => c !== p)
-    const punto = refugio ? refugio.centro(_a).clone().add(new THREE.Vector3(0, 80, -150)) : p.centro(_a).clone().add(new THREE.Vector3(0, 0, -900))
+    const punto = refugio
+      ? refugio.centro(_a).clone().add(new THREE.Vector3(0, 80, -150 * this.frente))
+      : p.centro(_a).clone().add(new THREE.Vector3(0, 0, -900 * this.frente))
     this.batalla.ordenarMover([p], punto)
     p.tactica = 'evasiva'
     p.retirada = true
@@ -193,7 +200,7 @@ export class ComandanteIA {
       }
       if (this.tactica.concentrar) {
         // Concentrar el fuego: suma si otros batallones propios ya le tiran.
-        const aliados = this.batalla.batallones.filter((x) => x.equipo === ENEMIGO && x.viva && x.orden.objetivo === r).length
+        const aliados = this.batalla.batallones.filter((x) => x.equipo === this.equipo && x.viva && x.orden.objetivo === r).length
         s += Math.min(aliados, 3) * 0.5
         if (amenazas.includes(r)) s += 1.5
       }

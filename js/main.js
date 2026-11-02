@@ -6,6 +6,8 @@ import { cargarModelos, plantilla, crearMallaNave } from './motor/modelos.js'
 import { CamaraOrbital } from './motor/camara.js'
 import { Particulas, Proyectiles, Motores, Escudos, Ondas, COLOR_ESCUDO, COLOR_FUEGO, COLOR_HUMO, COLOR_FLAK, COLOR_DESTELLO } from './motor/efectos.js'
 import { Sonido } from './motor/sonido.js'
+import { Musica } from './motor/musica.js'
+import { Intro } from './ui/intro.js'
 import { Batalla, JUGADOR, ENEMIGO } from './sim/batalla.js'
 import { ComandanteIA } from './sim/ia.js'
 import { Terreno, MAPAS } from './sim/terreno.js'
@@ -37,6 +39,7 @@ const motores = new Motores(escena, 1000, escalaPuntos())
 const escudos = new Escudos(escena, 24)
 const ondas = new Ondas(escena, 12)
 const sonido = new Sonido()
+const musica = new Musica(sonido)
 const ESTELAS = calidadInicial === 'baja' ? 0.5 : 1 // fracción de cuadros que emiten estela
 window.addEventListener('resize', () => {
   particulas.puntos.material.uniforms.escala.value = escalaPuntos()
@@ -64,8 +67,21 @@ const menus = new Menus({
     ),
 })
 
+const intro = new Intro({
+  musica,
+  alComenzar: () => {
+    sonido.iniciar()
+    sonido.escala = 0.3 // en la portada los efectos quedan de fondo de la música
+  },
+})
+
+let modelosListos = false
 cargarModelos((f) => menus.progreso(f))
-  .then(() => menus.cargaLista())
+  .then(() => {
+    modelosListos = true
+    menus.cargaLista()
+    intro.listo()
+  })
   .catch((err) => {
     console.error(err)
     document.getElementById('carga-texto').textContent =
@@ -176,6 +192,10 @@ function alternarVelocidad() {
 
 function iniciarBatalla(config, opciones = {}) {
   terminarBatalla()
+  terminarEscaparate()
+  musica.detener()
+  sonido.escala = 1
+  orbital.suavidad = 6
   sonido.iniciar()
   sonido.ambiente(true)
   document.getElementById('btn-sonido').classList.toggle('activo', sonido.activo)
@@ -282,6 +302,109 @@ function alternarSensores() {
   }
 }
 
+// --- Batalla de fondo de la portada -------------------------------------------
+// Dos flotas manejadas por la IA pelean detrás de los menús. La cámara va
+// cambiando de plano como en un tráiler: siguiendo una capital, metida entre
+// cazas o abriendo para mostrar toda la batalla.
+
+let escaparate = null
+
+function iniciarEscaparate() {
+  const facciones = Math.random() < 0.5 ? ['guardianes', 'inquisidores'] : ['inquisidores', 'guardianes']
+  const tipoMapa = ['mixto', 'asteroides', 'nebulosa', 'abierto'][Math.floor(Math.random() * 4)]
+  const terreno = new Terreno(tipoMapa, 1)
+  const batalla = new Batalla({ faccionJugador: facciones[0], faccionEnemiga: facciones[1], plantilla, crearMalla: crearMallaNave, terreno })
+  desplegar(batalla, JUGADOR, flotaEnemiga('normal', 5000))
+  desplegar(batalla, ENEMIGO, flotaEnemiga('normal', 5000))
+  for (const n of batalla.naves) escena.add(n.malla)
+  escaparate = {
+    batalla,
+    ias: [new ComandanteIA(batalla, 'dificil', JUGADOR), new ComandanteIA(batalla, 'dificil', ENEMIGO)],
+    terreno3d: new Terreno3D(escena, terreno),
+    plano: 0,
+    fin: 0,
+  }
+  orbital.suavidad = 1.4
+  orbital.foco.set(0, 0, 0)
+  orbital.focoDeseado.set(0, 0, 0)
+  orbital.dist = orbital.distDeseada = 1800
+  orbital.pitch = 0.35
+  // Arranca con la flota avanzando un poco, para que haya acción enseguida.
+  for (let i = 0; i < 300; i++) {
+    batalla.paso(PASO)
+    for (const ia of escaparate.ias) ia.actualizar(PASO)
+  }
+  batalla.eventos.length = 0
+  if (sonido.ctx && !musica.activa && document.getElementById('pantalla-titulo').classList.contains('visible')) musica.iniciar()
+}
+
+function terminarEscaparate() {
+  if (!escaparate) return
+  for (const n of escaparate.batalla.naves) if (n.malla) escena.remove(n.malla)
+  escaparate.terreno3d.destruir()
+  escaparate = null
+  proyectiles.dibujar([])
+  motores.dibujar([])
+}
+
+function actualizarEscaparate(dt) {
+  const e = escaparate
+  const b = e.batalla
+  const pasos = Math.ceil(dt / PASO)
+  for (let i = 0; i < pasos; i++) b.paso(dt / pasos)
+  for (const ia of e.ias) ia.actualizar(dt)
+  procesarEventos(b)
+  sincronizarNaves(b, dt, true)
+  particulas.actualizar(dt)
+  escudos.actualizar(dt)
+  ondas.actualizar(dt)
+  e.terreno3d.actualizar(dt)
+  for (const pr of b.proyectiles)
+    if (pr.tipo === 'torpedo') particulas.emitir(pr.pos, _n.set(0, 0, 0), COLOR_ESTELA_TORPEDO, 3, 0.9, 1.5)
+  proyectiles.dibujar(b.proyectiles)
+  motores.dibujar(b.naves)
+  if (b.terminada) {
+    e.fin += dt
+    if (e.fin > 5) {
+      terminarEscaparate()
+      return
+    }
+  }
+  // Planos de cámara.
+  e.plano -= dt
+  orbital.yaw += dt * 0.05
+  if (e.plano <= 0) {
+    e.plano = 7 + Math.random() * 4
+    const vivas = b.naves.filter((n) => n.viva)
+    if (!vivas.length) return
+    const capitales = vivas.filter((n) => n.esCapital)
+    const tiro = Math.random()
+    if (tiro < 0.4 && capitales.length) {
+      const c = capitales[Math.floor(Math.random() * capitales.length)]
+      orbital.seguir = () => (c.viva ? c.pos : null)
+      orbital.distDeseada = c.radio * (4 + Math.random() * 3)
+      orbital.pitch = 0.1 + Math.random() * 0.3
+    } else if (tiro < 0.75) {
+      // Entre los cazas, donde está la pelea.
+      const chicas = vivas.filter((n) => !n.esCapital && n.objetivo?.viva)
+      const n = chicas[Math.floor(Math.random() * chicas.length)] ?? vivas[0]
+      orbital.seguir = () => (n.viva ? n.pos : null)
+      orbital.distDeseada = 90 + Math.random() * 80
+      orbital.pitch = (Math.random() - 0.3) * 0.5
+    } else {
+      // Plano general.
+      const c = new THREE.Vector3()
+      for (const n of vivas) c.add(n.pos)
+      c.divideScalar(vivas.length)
+      orbital.seguir = null
+      orbital.focoDeseado.copy(c)
+      orbital.distDeseada = 1100 + Math.random() * 500
+      orbital.pitch = 0.3 + Math.random() * 0.25
+    }
+    orbital.yaw += (Math.random() - 0.5) * 1.5
+  }
+}
+
 // --- Efectos a partir de los eventos de la simulación ------------------------
 
 const _v = new THREE.Vector3()
@@ -359,12 +482,12 @@ function procesarEventos(batalla) {
   batalla.eventos.length = 0
 }
 
-function sincronizarNaves(batalla, dt) {
+function sincronizarNaves(batalla, dt, verTodo = false) {
   for (const n of batalla.naves) {
     const m = n.malla
     if (!m) continue
     // Las naves enemigas fuera de tus sensores no se dibujan.
-    m.visible = !n.viva || n.equipo === JUGADOR || batalla.esVisible(JUGADOR, n)
+    m.visible = verTodo || !n.viva || n.equipo === JUGADOR || batalla.esVisible(JUGADOR, n)
     m.position.copy(n.pos)
     m.quaternion.copy(n.quat)
     m.userData.cuerpo.rotation.z = n.alabeo
@@ -437,8 +560,15 @@ function cuadro() {
       }
     }
   } else if (!p) {
-    // Menús: la cámara gira lenta mostrando el fondo.
-    orbital.yaw += dt * 0.03
+    // Portada y menús: una batalla de verdad de fondo, con cámara de cine.
+    if (modelosListos && !escaparate) iniciarEscaparate()
+    // De vuelta en los menús (después de una batalla) vuelve la música.
+    if (sonido.ctx && !musica.activa) {
+      musica.iniciar()
+      sonido.escala = 0.3
+    }
+    if (escaparate) actualizarEscaparate(dt)
+    else orbital.yaw += dt * 0.03
   }
   orbital.actualizar(dt)
   fondo.position.copy(camara.position)

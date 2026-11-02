@@ -2,7 +2,7 @@
 // capa 2D encima del 3D (corchetes de selección, barras de vida, íconos
 // tácticos de lejos, recuadro de selección y el disco de movimiento).
 import * as THREE from 'three'
-import { FACCIONES, FORMACIONES, TACTICAS, TIPOS } from '../datos.js'
+import { FACCIONES, FORMACIONES, TACTICAS, TIPOS, ORDEN_TIPOS } from '../datos.js'
 import { JUGADOR, ENEMIGO } from '../sim/batalla.js'
 import { Minimapa } from './minimapa.js'
 
@@ -61,23 +61,47 @@ export class Hud {
 
   // --- Paneles HTML -------------------------------------------------------
 
+  // Flota agrupada por tipo: una ficha chica por batallón, así entra a
+  // cualquier escala (de 5 a 60 batallones). Tocar el título del grupo
+  // selecciona todos los de ese tipo.
   armarFlota() {
     const el = $('#hud-flota')
     el.innerHTML = '<div class="titulo-lista">Tu flota</div>'
-    for (const b of this.batalla.batallones) {
-      if (b.equipo !== JUGADOR) continue
-      const d = document.createElement('div')
-      d.className = 'item-flota'
-      d.innerHTML = `<div class="nombre"><span>${b.nombre}</span><small></small></div>
-        <div class="barras"><div class="es"><i></i></div><div class="et"><i></i></div></div>`
-      d.onclick = (e) => this.entrada.seleccionar([b], e.shiftKey)
-      d.ondblclick = () => {
-        this.entrada.seleccionar([b])
-        this.entrada.enfocar(true)
+    this.grupos = []
+    for (const clave of ORDEN_TIPOS) {
+      const lista = this.batalla.batallones.filter((b) => b.equipo === JUGADOR && b.tipo.clave === clave)
+      if (!lista.length) continue
+      const g = document.createElement('div')
+      g.className = 'grupo-tipo'
+      g.innerHTML = `<div class="cab-tipo" title="Seleccionar todos (Shift suma)"><span>${TIPOS[clave].nombre}</span><small></small></div><div class="fichas"></div>`
+      g.querySelector('.cab-tipo').onclick = (e) => {
+        this.entrada.seleccionar(lista.filter((b) => b.viva), e.shiftKey)
+        this.entrada.alOrden?.('seleccion')
       }
-      b.itemHud = d
-      el.appendChild(d)
+      const fichas = g.querySelector('.fichas')
+      for (const b of lista) {
+        const d = document.createElement('div')
+        d.className = 'ficha'
+        d.title = `${b.nombre} · doble clic para enfocar`
+        d.innerHTML = `<b>${b.nombre.split(' ').pop()}</b><div class="barras"><div class="es"><i></i></div><div class="et"><i></i></div></div>`
+        d.onclick = (e) => {
+          this.entrada.seleccionar([b], e.shiftKey)
+          this.entrada.alOrden?.('seleccion')
+        }
+        d.ondblclick = () => {
+          this.entrada.seleccionar([b])
+          this.entrada.enfocar(true)
+        }
+        b.itemHud = d
+        fichas.appendChild(d)
+      }
+      el.appendChild(g)
+      this.grupos.push({ el: g, lista })
     }
+    const enemigo = document.createElement('div')
+    enemigo.className = 'enemigo-visto'
+    el.appendChild(enemigo)
+    this.enemigoVisto = enemigo
   }
 
   refrescarSeleccion() {
@@ -146,9 +170,20 @@ export class Hud {
       const i = b.itemHud.querySelectorAll('i')
       i[0].style.width = `${s.escudo * 100}%`
       i[1].style.width = `${s.estructura * 100}%`
-      b.itemHud.querySelector('small').textContent = b.viva ? `${b.vivas.length}/${b.naves.length}` : 'perdido'
       b.itemHud.classList.toggle('muerto', !b.viva)
+      b.itemHud.classList.toggle('herido', b.viva && s.estructura < 0.4)
     }
+    for (const g of this.grupos) {
+      const vivos = g.lista.filter((b) => b.viva)
+      const naves = vivos.reduce((n, b) => n + b.vivas.length, 0)
+      g.el.querySelector('small').textContent = `${vivos.length}/${g.lista.length} · ${naves} naves`
+      g.el.classList.toggle('perdido', !vivos.length)
+    }
+    // Lo que tus sensores ven del enemigo, por tipo.
+    const vistos = {}
+    for (const b of this.batalla.enemigosDe(JUGADOR, true)) vistos[b.tipo.clave] = (vistos[b.tipo.clave] ?? 0) + 1
+    const partes = ORDEN_TIPOS.filter((k) => vistos[k]).map((k) => `<span>${vistos[k]} ${TIPOS[k].nombre}</span>`)
+    this.enemigoVisto.innerHTML = `<div class="titulo-lista">Enemigo a la vista</div>${partes.join('') || '<span class="nada">Nada en los sensores</span>'}`
     if (sel.length) {
       let es = 0, et = 0
       for (const b of sel) {

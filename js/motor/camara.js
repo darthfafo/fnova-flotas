@@ -20,6 +20,7 @@ export class CamaraOrbital {
     this.seguir = null // función que devuelve un Vector3 a seguir, o null
     this.teclas = new Set()
     this.temblor = 0
+    this.suavidad = 6 // qué tan rápido la cámara alcanza su objetivo
 
     elemento.addEventListener(
       'wheel',
@@ -88,7 +89,7 @@ export class CamaraOrbital {
       else this.seguir = null
     }
 
-    const k = 1 - Math.exp(-dt * 6)
+    const k = 1 - Math.exp(-dt * this.suavidad)
     this.foco.lerp(this.focoDeseado, k)
     this.dist += (this.distDeseada - this.dist) * k
     const cp = Math.cos(this.pitch)

@@ -63,6 +63,7 @@ export class Menus {
       t.addEventListener('click', () => {
         this.config.faccion = f.clave
         document.documentElement.style.setProperty('--acento', f.acentoCss)
+        this.refrescarFlota()
         mostrarPantalla('pantalla-flota')
       })
       lista.appendChild(t)
@@ -74,11 +75,15 @@ export class Menus {
     lista.innerHTML = ''
     for (const clave of ORDEN_TIPOS) {
       const t = TIPOS[clave]
+      // Contras derivadas de las tablas de ventaja (nada escrito a mano).
+      const fuerte = t.ventajaGeneral ? [...Object.keys(t.ventaja ?? {}), 'todo'] : Object.keys(t.ventaja ?? {})
+      const debil = ORDEN_TIPOS.filter((k) => k !== clave && TIPOS[k].ventaja?.[clave])
+      const nombres = (l) => l.map((k) => (k === 'todo' ? '+25% a todo' : TIPOS[k].nombre)).join(', ') || '—'
       const fila = document.createElement('div')
       fila.className = 'tipo-fila'
       fila.innerHTML = `
-        <div>
-          <h4>${t.nombre}<small>${t.porBatallon > 1 ? `batallón de ${t.porBatallon} naves` : 'nave capital'}</small></h4>
+        <div class="tipo-info">
+          <h4>${t.nombre}<small>${t.porBatallon > 1 ? `batallón de ${t.porBatallon}` : 'nave capital'}</small></h4>
           <div class="rol">${t.rol}</div>
           <div class="stats">
             <span class="at">Ataque <b>${t.ataque}</b></span>
@@ -86,6 +91,10 @@ export class Menus {
             <span class="et">Estructura <b>${t.estructura}</b></span>
             <span>Velocidad <b>${t.velocidad}</b></span>
           </div>
+        </div>
+        <div class="tipo-contras">
+          <div><span class="fuerte">Fuerte contra</span> ${nombres(fuerte)}</div>
+          <div><span class="debil">Débil contra</span> ${nombres(debil)}</div>
         </div>
         <div class="contador">
           <button class="btn" data-menos="${clave}">−</button>
@@ -203,6 +212,13 @@ export class Menus {
     const total = this.config.presupuesto
     $('#presupuesto-usado').textContent = u
     $('#presupuesto-total').textContent = total
+    $('#presupuesto-total-2').textContent = total
+    const f = this.config.flota
+    const naves = ORDEN_TIPOS.reduce((n, k) => n + f[k] * TIPOS[k].porBatallon, 0)
+    const batallones = ORDEN_TIPOS.reduce((n, k) => n + f[k], 0)
+    $('#composicion').innerHTML = `<b>${naves}</b> naves en <b>${batallones}</b> batallones<span>${ORDEN_TIPOS.filter((k) => f[k]).map((k) => `${f[k]} ${TIPOS[k].nombre}`).join(' · ')}</span>`
+    const fa = FACCIONES[this.config.faccion]
+    $('#armado-faccion').innerHTML = `<i style="background:${fa.acentoCss}"></i>${fa.nombre}`
     $('#presupuesto-barra').style.width = `${(u / total) * 100}%`
     for (const b of document.querySelectorAll('[data-pres]')) b.classList.toggle('activo', Number(b.dataset.pres) === total)
     for (const b of document.querySelectorAll('[data-dif]')) b.classList.toggle('activo', b.dataset.dif === this.config.dificultad)
