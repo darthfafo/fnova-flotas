@@ -209,6 +209,7 @@ export class BatallaRemota extends Batalla {
       const objetivo = this.naves[ev[2]]
       if (!autor || !objetivo) return
       autor.ultimoDisparo = this.tiempo
+      this.delatar(autor)
       this.disparoDeUtileria(autor, objetivo, ev[3], ev[4] === 1)
     } else if (ev[0] === 'i') {
       const nave = this.naves[ev[1]]
@@ -246,6 +247,7 @@ export class BatallaRemota extends Batalla {
       color: new THREE.Color(arma === 'torpedo' ? 0xffd080 : faccion.disparo).multiplyScalar(arma === 'cañon' ? 2.2 : 1.6),
       vida: largo / p.velocidad + (impacta ? 0 : 0.6),
       tipo: arma,
+      autor,
     })
     this.eventos.push({ tipo: 'disparo', pos: origen, arma, equipo: autor.equipo })
   }

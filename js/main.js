@@ -502,7 +502,7 @@ function actualizarEscaparate(dt) {
   const pasos = Math.ceil(dt / PASO)
   for (let i = 0; i < pasos; i++) b.paso(dt / pasos)
   for (const ia of e.ias) ia.actualizar(dt)
-  procesarEventos(b)
+  procesarEventos(b, true)
   sincronizarNaves(b, dt, true)
   particulas.actualizar(dt)
   escudos.actualizar(dt)
@@ -510,7 +510,7 @@ function actualizarEscaparate(dt) {
   e.terreno3d.actualizar(dt)
   for (const pr of b.proyectiles)
     if (pr.tipo === 'torpedo') particulas.emitir(pr.pos, _n.set(0, 0, 0), COLOR_ESTELA_TORPEDO, 3, 0.9, 1.5)
-  proyectiles.dibujar(b.proyectiles)
+  dibujarProyectiles(b, true)
   motores.dibujar(b.naves)
   if (b.terminada) {
     e.fin += dt
@@ -564,9 +564,22 @@ const COLOR_POLVO = new THREE.Color(0.45, 0.38, 0.3)
 const COLOR_FRAGMENTO = new THREE.Color(0.5, 0.42, 0.33)
 const COLOR_NUBE_POLVO = new THREE.Color(0.16, 0.13, 0.1)
 
-function procesarEventos(batalla) {
+// Disparos de naves enemigas que tus sensores no ven: no se dibujan ni se
+// oyen (si no, parecen salir de la nada). En la portada se ve todo.
+function disparoOculto(batalla, autor, verTodo) {
+  return !verTodo && autor?.viva && autor.equipo !== JUGADOR && !batalla.esVisible(JUGADOR, autor)
+}
+const proyectilesVisibles = []
+function dibujarProyectiles(batalla, verTodo = false) {
+  proyectilesVisibles.length = 0
+  for (const p of batalla.proyectiles) if (!disparoOculto(batalla, p.autor, verTodo)) proyectilesVisibles.push(p)
+  proyectiles.dibujar(proyectilesVisibles)
+}
+
+function procesarEventos(batalla, verTodo = false) {
   for (const ev of batalla.eventos) {
     if (ev.tipo === 'disparo') {
+      if (disparoOculto(batalla, ev.autor, verTodo)) continue
       colorDisparo.set(FACCIONES[batalla.facciones[ev.equipo]].disparo)
       particulas.emitir(ev.pos, _v.set(0, 0, 0), colorDisparo, ev.arma === 'cañon' ? 16 : ev.arma === 'torpedo' ? 8 : 4, 0.08)
       sonido.reproducir(ev.arma, ev.pos, camara)
@@ -717,8 +730,8 @@ function cuadro() {
     ondas.actualizar(dtJuego)
     p.terreno3d.actualizar(dtJuego)
     for (const pr of p.batalla.proyectiles)
-      if (pr.tipo === 'torpedo') particulas.emitir(pr.pos, _n.set(0, 0, 0), COLOR_ESTELA_TORPEDO, 3, 0.9, 1.5)
-    proyectiles.dibujar(p.batalla.proyectiles)
+      if (pr.tipo === 'torpedo' && !disparoOculto(p.batalla, pr.autor)) particulas.emitir(pr.pos, _n.set(0, 0, 0), COLOR_ESTELA_TORPEDO, 3, 0.9, 1.5)
+    dibujarProyectiles(p.batalla)
     motores.dibujar(p.batalla.naves)
     ajustarCalidad(p, dt)
     if (p.batalla.terminada) {

@@ -240,6 +240,19 @@ export class Batalla {
     }
   }
 
+  // Disparar delata: el otro bando ve al tirador enseguida si tiene alguna
+  // nave a menos de 1600 m, sin esperar la próxima pasada de sensores. Así
+  // no aparecen disparos saliendo de la nada.
+  delatar(n) {
+    const vis = this.visibles[n.equipo === JUGADOR ? ENEMIGO : JUGADOR]
+    if (vis.has(n)) return
+    for (const o of this.naves)
+      if (o.viva && o.equipo !== n.equipo && o.pos.distanceToSquared(n.pos) < 1600 * 1600) {
+        vis.add(n)
+        return
+      }
+  }
+
   // --- Órdenes -----------------------------------------------------------
 
   ordenarMover(batallones, punto, formacion) {
@@ -784,6 +797,7 @@ export class Batalla {
     } else if (!impacta)
       apunta.add(_v.set(Math.random() - 0.5, Math.random() - 0.5, Math.random() - 0.5).normalize().multiplyScalar(obj.radio * 2 + 8))
     n.ultimoDisparo = this.tiempo
+    this.delatar(n)
     // Un asteroide en el medio se come el disparo.
     let contraRoca = null
     if (this.terreno.asteroides.length) {
