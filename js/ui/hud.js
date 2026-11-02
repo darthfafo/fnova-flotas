@@ -4,6 +4,7 @@
 import * as THREE from 'three'
 import { FACCIONES, FORMACIONES, TACTICAS, TIPOS } from '../datos.js'
 import { JUGADOR, ENEMIGO } from '../sim/batalla.js'
+import { Minimapa } from './minimapa.js'
 
 const $ = (s) => document.querySelector(s)
 const COLOR_PROPIO = '#6fe0a0'
@@ -11,7 +12,7 @@ const COLOR_ENEMIGO = '#ff5a4a'
 const _p = new THREE.Vector3()
 
 export class Hud {
-  constructor({ batalla, entrada, faccion }) {
+  constructor({ batalla, entrada, faccion, orbital }) {
     this.batalla = batalla
     this.entrada = entrada
     this.lienzo = $('#superposicion')
@@ -30,9 +31,22 @@ export class Hud {
     $('#hud').hidden = false
     this.armarFlota()
     this.refrescarSeleccion()
+    this.minimapa = new Minimapa({ lienzo: $('#hud-minimapa'), batalla, entrada, orbital })
+    this.estadoTiempo(false, 1)
+  }
+
+  // Botones y cartel de pausa táctica / velocidad.
+  estadoTiempo(pausaTactica, velocidad) {
+    $('#hud-pausa').hidden = !pausaTactica
+    $('#btn-pausa-tactica').classList.toggle('activo', pausaTactica)
+    $('#btn-pausa-tactica').textContent = pausaTactica ? '▶ Seguir' : '❚❚ Pausa'
+    $('#btn-velocidad').textContent = `×${velocidad}`
+    $('#btn-velocidad').classList.toggle('activo', velocidad > 1)
   }
 
   destruir() {
+    this.minimapa.destruir()
+    $('#hud-pausa').hidden = true
     window.removeEventListener('resize', this.alRedimensionar)
     $('#hud').hidden = true
     this.g.clearRect(0, 0, this.lienzo.width, this.lienzo.height)
@@ -173,6 +187,7 @@ export class Hud {
   // --- Capa 2D ------------------------------------------------------------
 
   dibujar(dt) {
+    this.minimapa.dibujar(dt)
     this.relojDom -= dt
     if (this.relojDom <= 0) {
       this.relojDom = 0.25
@@ -196,6 +211,7 @@ export class Hud {
       if (s.z > 1 || s.x < -50 || s.y < -50 || s.x > innerWidth + 50 || s.y > innerHeight + 50) continue
       const r = e.radioEnPantalla(n)
       const propio = n.equipo === JUGADOR
+      if (!propio && !this.batalla.esVisible(JUGADOR, n)) continue
       const color = propio ? COLOR_PROPIO : COLOR_ENEMIGO
       const seleccionada = e.seleccion.has(n.batallon)
       if (r < 6 || this.sensores) {
@@ -222,11 +238,11 @@ export class Hud {
     for (const b of e.seleccionados) {
       const c = b.centro(_p)
       const a = e.aPantalla(c, {})
-      if (b.orden.tipo === 'atacar' && b.orden.objetivo.viva) {
+      if (b.orden.tipo === 'atacar' && b.orden.objetivo.viva && this.batalla.batallonVisible(JUGADOR, b.orden.objetivo)) {
         const o = e.aPantalla(b.orden.objetivo.centro(_p), {})
         this.linea(a, o, 'rgba(255,90,74,0.45)')
         for (const n of b.orden.objetivo.naves) {
-          if (!n.viva) continue
+          if (!n.viva || !this.batalla.esVisible(JUGADOR, n)) continue
           const sp = e.aPantalla(n.pos, {})
           if (sp.z < 1) this.corchetes(sp.x, sp.y, Math.max(e.radioEnPantalla(n) * 1.1, 9), COLOR_ENEMIGO, n)
         }

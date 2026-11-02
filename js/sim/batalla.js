@@ -3,6 +3,7 @@
 // impacto, destrucción) que el motor convierte en efectos.
 import * as THREE from 'three'
 import { TIPOS, PUNTERIA, PROYECTIL, TACTICAS, CAPITAL, multiplicadorDaño, FACCIONES } from '../datos.js'
+import { Terreno } from './terreno.js'
 
 const Z = new THREE.Vector3(0, 0, 1)
 const ARRIBA = new THREE.Vector3(0, 1, 0)
@@ -45,6 +46,8 @@ export class Nave {
     this.tiempoFase = 0
     this.objetivo = null
     this.muerte = 0 // segundos desde que la destruyeron (animación de naves capitales)
+    this.ultimoDisparo = -99
+    this.enNebulosa = null
     this._adelante = new THREE.Vector3()
   }
 
@@ -148,8 +151,12 @@ export function quatHacia(dir, destino = new THREE.Quaternion()) {
 }
 
 export class Batalla {
-  constructor({ faccionJugador, faccionEnemiga, plantilla, crearMalla }) {
+  constructor({ faccionJugador, faccionEnemiga, plantilla, crearMalla, terreno }) {
     this.tiempo = 0
+    this.terreno = terreno ?? new Terreno('abierto')
+    // Naves enemigas que cada bando tiene en sus sensores (ver actualizarSensores).
+    this.visibles = [new Set(), new Set()]
+    this.relojSensores = 0
     this.naves = []
     this.batallones = []
     this.proyectiles = []
@@ -186,8 +193,42 @@ export class Batalla {
     return b
   }
 
-  enemigosDe(equipo) {
-    return this.batallones.filter((b) => b.equipo !== equipo && b.viva)
+  enemigosDe(equipo, soloVisibles = false) {
+    return this.batallones.filter((b) => b.equipo !== equipo && b.viva && (!soloVisibles || this.batallonVisible(equipo, b)))
+  }
+
+  // --- Sensores -------------------------------------------------------------
+  // En espacio abierto se ve todo a 3500 m. Dentro de una nebulosa una nave
+  // solo se detecta de muy cerca, y quien mira desde adentro ve poco. Disparar
+  // delata la posición durante unos segundos.
+
+  esVisible(equipo, nave) {
+    return nave.equipo === equipo || this.visibles[equipo].has(nave)
+  }
+
+  batallonVisible(equipo, b) {
+    return b.equipo === equipo || b.naves.some((n) => n.viva && this.visibles[equipo].has(n))
+  }
+
+  actualizarSensores() {
+    for (const n of this.naves) if (n.viva) n.enNebulosa = this.terreno.nebulosaEn(n.pos)
+    for (const equipo of [0, 1]) {
+      const vis = this.visibles[equipo]
+      vis.clear()
+      const propias = this.naves.filter((n) => n.viva && n.equipo === equipo)
+      for (const e of this.naves) {
+        if (!e.viva || e.equipo === equipo) continue
+        let rango = e.enNebulosa ? 280 : 3500
+        if (this.tiempo - e.ultimoDisparo < 2.5) rango = Math.max(rango, 1600)
+        for (const o of propias) {
+          const r = o.enNebulosa ? Math.min(rango, 900) : rango
+          if (o.pos.distanceToSquared(e.pos) < r * r) {
+            vis.add(e)
+            break
+          }
+        }
+      }
+    }
   }
 
   // --- Órdenes -----------------------------------------------------------
@@ -256,6 +297,11 @@ export class Batalla {
     const enCurso = !this.terminada
     if (enCurso) {
       this.tiempo += dt
+      this.relojSensores -= dt
+      if (this.relojSensores <= 0) {
+        this.relojSensores = 0.4
+        this.actualizarSensores()
+      }
       for (const b of this.batallones) if (b.viva) this.pensarBatallon(b)
     }
     for (const n of this.naves) {
@@ -282,6 +328,14 @@ export class Batalla {
       b.orden = { tipo: 'quieto' }
       b.destino.copy(b.centro(_v))
     }
+    // Blanco perdido de los sensores por un rato: se da por perdido.
+    if (b.orden.tipo === 'atacar') {
+      if (this.batallonVisible(b.equipo, b.orden.objetivo)) b.orden.vistoEn = this.tiempo
+      else if (this.tiempo - (b.orden.vistoEn ?? this.tiempo) > 4) {
+        b.orden = { tipo: 'quieto' }
+        b.destino.copy(b.centro(_v))
+      } else b.orden.vistoEn ??= this.tiempo
+    }
     // Adquisición automática según la táctica.
     if (b.orden.tipo === 'quieto') {
       const alcance = TACTICAS[b.tactica].alcanceDeteccion
@@ -290,7 +344,7 @@ export class Batalla {
         const c = b.centro(_v).clone()
         let mejor = null
         let dMejor = atacado ? Math.max(alcance, 900) : alcance
-        for (const e of this.enemigosDe(b.equipo)) {
+        for (const e of this.enemigosDe(b.equipo, true)) {
           const d = e.centro(_w).distanceTo(c)
           if (d < dMejor) {
             dMejor = d
@@ -305,12 +359,12 @@ export class Batalla {
   elegirObjetivoNave(n, b) {
     const ob = b.orden.objetivo
     if (!ob?.viva) return null
-    if (n.objetivo?.viva && n.objetivo.batallon === ob) return n.objetivo
+    if (n.objetivo?.viva && n.objetivo.batallon === ob && this.esVisible(n.equipo, n.objetivo)) return n.objetivo
     // El más cercano, con algo de azar para que no ataquen todos al mismo.
     let mejor = null
     let puntaje = Infinity
     for (const o of ob.naves) {
-      if (!o.viva) continue
+      if (!o.viva || !this.esVisible(n.equipo, o)) continue
       const s = o.pos.distanceTo(n.pos) * (0.7 + Math.random() * 0.6)
       if (s < puntaje) {
         puntaje = s
@@ -409,6 +463,8 @@ export class Batalla {
     const anterior = n.adelante.clone()
     if (dist > 0.5 && velDeseada > 0) {
       aDestino.divideScalar(dist)
+      if (this.terreno.asteroides.length)
+        this.terreno.desviar(n.pos, aDestino, n.radio, Math.min(dist, n.esCapital ? 260 : 160))
       n.quat.rotateTowards(quatHacia(aDestino, _q), t.giro * dt)
     }
     const adelante = n.adelante
@@ -417,6 +473,7 @@ export class Batalla {
     const dv = THREE.MathUtils.clamp(objetivoVel - n.velocidad, -t.aceleracion * 1.5 * dt, t.aceleracion * dt)
     n.velocidad = Math.max(0, n.velocidad + dv)
     n.pos.addScaledVector(adelante, n.velocidad * dt)
+    if (this.terreno.asteroides.length) this.terreno.expulsar(n.pos, n.radio)
 
     // Alabeo visual de los cazas en los giros.
     if (!n.esCapital) {
@@ -461,12 +518,12 @@ export class Batalla {
       let obj = null
       if (n.esCapital) {
         // Torretas: el blanco ordenado si está a tiro; si no, lo más cercano.
-        const ordenado = n.objetivo?.viva ? n.objetivo : null
+        const ordenado = n.objetivo?.viva && this.esVisible(n.equipo, n.objetivo) ? n.objetivo : null
         if (ordenado && ordenado.pos.distanceTo(n.pos) <= arma.alcance && this.enArco(n, arma, ordenado)) obj = ordenado
         else if (b.tactica !== 'evasiva' || this.tiempo - b.atacadoEn < 3) obj = this.masCercano(n, arma, arma.tipo === 'cañon')
       } else {
         const o = b.orden.tipo === 'atacar' ? n.objetivo : null
-        if (o?.viva) {
+        if (o?.viva && this.esVisible(n.equipo, o)) {
           _v.copy(o.pos).sub(n.pos)
           const d = _v.length()
           if (d <= arma.alcance && n.adelante.dot(_v.divideScalar(d)) > Math.cos(arma.cono)) obj = o
@@ -495,7 +552,7 @@ export class Batalla {
     let dMejor = arma.alcance
     for (const o of this.naves) {
       if (!o.viva || o.equipo === n.equipo) continue
-      if (!this.enArco(n, arma, o)) continue
+      if (!this.visibles[n.equipo].has(o) || !this.enArco(n, arma, o)) continue
       let d = o.pos.distanceTo(n.pos)
       if (prefiereCapitales && !o.esCapital) d *= 1.8
       if (d < dMejor) {
@@ -529,6 +586,16 @@ export class Batalla {
       apunta.add(_v.randomDirection().multiplyScalar(impacta ? Math.random() * 6 : 10 + Math.random() * 18))
     } else if (!impacta)
       apunta.add(_v.set(Math.random() - 0.5, Math.random() - 0.5, Math.random() - 0.5).normalize().multiplyScalar(obj.radio * 2 + 8))
+    n.ultimoDisparo = this.tiempo
+    // Un asteroide en el medio se come el disparo.
+    let contraRoca = null
+    if (this.terreno.asteroides.length) {
+      const corte = this.terreno.bloquea(origen, apunta)
+      if (corte) {
+        contraRoca = corte
+        apunta.copy(origen).addScaledVector(_v.copy(apunta).sub(origen).normalize(), corte.distancia)
+      }
+    }
     const dir = apunta.clone().sub(origen).normalize()
     const faccion = FACCIONES[n.batallon.faccion]
     this.proyectiles.push({
@@ -538,11 +605,12 @@ export class Batalla {
       largo: p.largo,
       grosor: p.grosor,
       color: new THREE.Color(arma.tipo === 'torpedo' ? 0xffd080 : faccion.disparo).multiplyScalar(arma.tipo === 'cañon' ? 2.2 : 1.6),
-      objetivo: impacta && !proximidad ? obj : null,
+      objetivo: impacta && !proximidad && !contraRoca ? obj : null,
       daño,
       autor: n,
-      vida: proximidad ? origen.distanceTo(apunta) / p.velocidad : arma.alcance / p.velocidad + 1.2,
-      proximidad,
+      vida: proximidad || contraRoca ? origen.distanceTo(apunta) / p.velocidad : arma.alcance / p.velocidad + 1.2,
+      proximidad: proximidad && !contraRoca,
+      contraRoca: !!contraRoca,
       teledirigido: arma.tipo === 'torpedo',
       tipo: arma.tipo,
     })
@@ -573,6 +641,7 @@ export class Batalla {
       p.pos.addScaledVector(p.dir, p.velocidad * dt)
       if (p.vida <= 0) {
         if (p.proximidad) this.detonarFlak(p)
+        else if (p.contraRoca) this.eventos.push({ tipo: 'impactoRoca', pos: p.pos.clone(), arma: p.tipo })
         lista.splice(i, 1)
       }
     }
@@ -621,8 +690,19 @@ export class Batalla {
   }
 
   regenerar(n, dt) {
-    if (this.tiempo - n.ultimoImpacto > 5 && n.escudo < n.tipo.escudoMax)
+    const calma = this.tiempo - n.ultimoImpacto
+    if (calma > 5 && n.escudo < n.tipo.escudoMax)
       n.escudo = Math.min(n.tipo.escudoMax, n.escudo + n.tipo.escudoMax * 0.07 * dt)
+    // Reparación de campo: las naves chicas se arreglan cerca de una capital
+    // propia si no reciben fuego. Por eso vale la pena retirarse.
+    if (!n.esCapital && calma > 6 && n.estructura < n.tipo.estructuraMax && this.cercaDeCapital(n))
+      n.estructura = Math.min(n.tipo.estructuraMax, n.estructura + n.tipo.estructuraMax * 0.04 * dt)
+  }
+
+  cercaDeCapital(n) {
+    for (const c of this.naves)
+      if (c.viva && c.esCapital && c.equipo === n.equipo && c.pos.distanceToSquared(n.pos) < (c.radio + 260) ** 2) return true
+    return false
   }
 
   comprobarFin() {

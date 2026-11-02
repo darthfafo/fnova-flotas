@@ -1,66 +1,210 @@
 // Comandante enemigo. Cada cierto tiempo (según la dificultad) revisa sus
-// batallones y les asigna blanco: en Normal y Difícil busca las contras
-// (Bombarderos a las capitales, Corbetas a los Cazas…); en Fácil ataca lo
-// que tenga más cerca.
+// batallones:
+//   · Retirada: los batallones muy dañados se repliegan junto a sus naves
+//     capitales para repararse y vuelven cuando recuperan el escudo.
+//   · Escolta: algunos batallones chicos cuidan a las capitales y atacan a
+//     lo que se les acerque (sobre todo Bombarderos).
+//   · Flanqueo: en Difícil, los batallones rápidos dan un rodeo amplio y
+//     entran por el costado mientras el grueso avanza de frente.
+//   · Blancos: busca las contras, remata heridos y concentra el fuego.
+// Solo conoce lo que tiene en sus sensores: si te escondés en una nebulosa
+// avanza hacia donde te vio por última vez.
 import * as THREE from 'three'
 import { DIFICULTADES, multiplicadorDaño } from '../datos.js'
-import { ENEMIGO } from './batalla.js'
+import { ENEMIGO, JUGADOR } from './batalla.js'
 
 const _a = new THREE.Vector3()
 const _b = new THREE.Vector3()
+
+const CONFIG = {
+  facil: { retirada: false, escolta: false, flanqueo: false, concentrar: false },
+  normal: { retirada: true, escolta: true, flanqueo: false, concentrar: true },
+  dificil: { retirada: true, escolta: true, flanqueo: true, concentrar: true },
+}
 
 export class ComandanteIA {
   constructor(batalla, dificultad) {
     this.batalla = batalla
     this.config = DIFICULTADES[dificultad]
+    this.tactica = CONFIG[dificultad]
     this.reloj = 4 // unos segundos de calma antes de avanzar
-    this.avanzando = false
+    this.fase = 'despliegue'
+    this.esperando = false // el tutorial frena a la IA hasta terminar
+    this.ultimaPosicionRival = null
+    this.roles = new Map() // batallón → 'linea' | 'escolta' | 'flanco'
+  }
+
+  propios() {
+    return this.batalla.batallones.filter((x) => x.equipo === ENEMIGO && x.viva)
+  }
+
+  centroDe(lista) {
+    const c = new THREE.Vector3()
+    for (const b of lista) c.add(b.centro(_a))
+    return lista.length ? c.divideScalar(lista.length) : c
+  }
+
+  asignarRoles() {
+    const propios = this.propios()
+    const capitales = propios.filter((b) => b.tipo.clase === 'capital')
+    const chicos = propios.filter((b) => b.tipo.clase !== 'capital' && b.tipo.clave !== 'bombardero')
+    // Un batallón de escolta por capital (si hay).
+    let escoltas = this.tactica.escolta ? capitales.length : 0
+    let flancos = this.tactica.flanqueo ? Math.floor(chicos.length / 3) : 0
+    for (const b of propios) this.roles.set(b, 'linea')
+    for (const b of chicos) {
+      if (escoltas > 0 && b.tipo.clave !== 'corbeta') (this.roles.set(b, 'escolta'), escoltas--)
+      else if (flancos > 0) (this.roles.set(b, 'flanco'), flancos--)
+    }
   }
 
   actualizar(dt) {
+    if (this.esperando) return
     const b = this.batalla
     this.reloj -= dt
     if (this.reloj > 0) return
     this.reloj = this.config.reaccion * (0.8 + Math.random() * 0.4)
 
-    const propios = b.batallones.filter((x) => x.equipo === ENEMIGO && x.viva)
-    const rivales = b.enemigosDe(ENEMIGO)
-    if (!propios.length || !rivales.length) return
+    const propios = this.propios()
+    if (!propios.length) return
+    const visibles = b.enemigosDe(ENEMIGO, true)
+    if (visibles.length) this.ultimaPosicionRival = this.centroDe(visibles)
 
-    if (!this.avanzando) {
-      // Avanza en bloque hacia el centro de la flota rival.
-      this.avanzando = true
-      const centro = new THREE.Vector3()
-      for (const r of rivales) centro.add(r.centro(_a))
-      centro.divideScalar(rivales.length)
-      b.ordenarMover(propios, centro, 'garra')
+    if (this.fase === 'despliegue') {
+      this.asignarRoles()
+      this.fase = 'avance'
+      this.avanzar(propios)
       this.reloj = 6
       return
     }
 
+    // Sin nada a la vista: avanzar a donde se los vio por última vez.
+    if (!visibles.length) {
+      const ociosos = propios.filter((p) => p.orden.tipo === 'quieto' && !p.retirada)
+      if (ociosos.length) this.avanzar(ociosos)
+      return
+    }
+
+    const capitales = propios.filter((p) => p.tipo.clase === 'capital')
+    const amenazas = this.amenazasA(capitales, visibles)
+
     for (const p of propios) {
-      const actual = p.orden.tipo === 'atacar' ? p.orden.objetivo : null
-      // Rara vez cambia de blanco si el actual sigue vivo y es bueno.
-      if (actual?.viva && Math.random() < 0.7) continue
-      const c = p.centro(_a)
-      let mejor = null
-      let puntaje = -Infinity
-      for (const r of rivales) {
-        const d = r.centro(_b).distanceTo(c)
-        let s = -d / 400
-        if (this.config.usaContras) {
-          s += (multiplicadorDaño(p.tipo.clave, r.tipo.clave) - 1) * 4
-          s -= (multiplicadorDaño(r.tipo.clave, p.tipo.clave) - 1) * 1.5
-          const salud = r.salud()
-          s += (1 - salud.estructura) * 1.5 // rematar heridos
+      if (this.tactica.retirada && this.gestionarRetirada(p, capitales)) continue
+      const rol = this.roles.get(p) ?? 'linea'
+
+      // Flanqueo: primero el rodeo, después al ataque.
+      if (rol === 'flanco' && p.flanco !== 'hecho') {
+        if (!p.flanco) {
+          this.flanquear(p)
+          continue
         }
-        s += Math.random() * 0.5
-        if (s > puntaje) {
-          puntaje = s
-          mejor = r
-        }
+        const cerca = visibles.some((v) => v.centro(_b).distanceTo(p.centro(_a)) < 500)
+        if (p.orden.tipo === 'mover' && !cerca) continue
+        p.flanco = 'hecho'
+        p.tactica = 'agresiva'
       }
-      if (mejor) b.ordenarAtacar([p], mejor)
+
+      // Escoltas: si algo amenaza a una capital, van por eso.
+      if (rol === 'escolta' && amenazas.length) {
+        const peor = amenazas[0]
+        if (p.orden.objetivo !== peor) b.ordenarAtacar([p], peor)
+        continue
+      }
+      if (rol === 'escolta' && capitales.length && p.orden.tipo !== 'atacar') {
+        // Sin amenazas, se queda cerca de su capital.
+        const c = capitales[0].centro(_a)
+        if (p.centro(_b).distanceTo(c) > 300) b.ordenarMover([p], c.clone().add(new THREE.Vector3(0, 60, 0)))
+        continue
+      }
+
+      const actual = p.orden.tipo === 'atacar' ? p.orden.objetivo : null
+      if (actual?.viva && !p.orden.automatico && Math.random() < 0.65) continue
+      const mejor = this.elegirBlanco(p, visibles, amenazas)
+      if (mejor && mejor !== actual) b.ordenarAtacar([p], mejor)
     }
   }
+
+  avanzar(lista) {
+    const destino = this.ultimaPosicionRival ?? new THREE.Vector3(0, 0, 900)
+    const linea = lista.filter((p) => this.roles.get(p) !== 'flanco' || p.flanco === 'hecho')
+    const flancos = lista.filter((p) => this.roles.get(p) === 'flanco' && p.flanco !== 'hecho')
+    if (linea.length) this.batalla.ordenarMover(linea, destino.clone(), 'garra')
+    for (const f of flancos) this.flanquear(f)
+  }
+
+  // Rodeo amplio hacia el costado más cercano del rival.
+  flanquear(p) {
+    const objetivo = this.ultimaPosicionRival ?? new THREE.Vector3(0, 0, 900)
+    const c = p.centro(_a)
+    const lado = c.x >= objetivo.x ? 1 : -1
+    const punto = objetivo.clone().add(new THREE.Vector3(lado * 750, 80, -150))
+    this.batalla.ordenarMover([p], punto)
+    p.tactica = 'evasiva' // no se engancha en el camino
+    p.flanco = 'en camino'
+  }
+
+  gestionarRetirada(p, capitales) {
+    const salud = p.salud()
+    const umbral = p.tipo.clase === 'capital' ? 0.25 : 0.35
+    if (p.retirada) {
+      // Vuelve cuando recuperó el escudo (y algo de estructura si hay reparación).
+      if (salud.escudo > 0.9 && salud.estructura > umbral + 0.15) {
+        p.retirada = false
+        p.tactica = 'agresiva'
+        return false
+      }
+      return true
+    }
+    // Las capitales no se retiran si no hay a dónde: pelean hasta el final.
+    if (salud.estructura > umbral || (p.tipo.clase === 'capital' && capitales.length <= 1)) return false
+    const refugio = capitales.find((c) => c !== p)
+    const punto = refugio ? refugio.centro(_a).clone().add(new THREE.Vector3(0, 80, -150)) : p.centro(_a).clone().add(new THREE.Vector3(0, 0, -900))
+    this.batalla.ordenarMover([p], punto)
+    p.tactica = 'evasiva'
+    p.retirada = true
+    return true
+  }
+
+  // Batallones rivales cerca de las capitales propias, Bombarderos primero.
+  amenazasA(capitales, visibles) {
+    const r = []
+    for (const v of visibles) {
+      const cv = v.centro(_b)
+      for (const c of capitales)
+        if (cv.distanceTo(c.centro(_a)) < 650) {
+          r.push(v)
+          break
+        }
+    }
+    return r.sort((x, y) => (y.tipo.clave === 'bombardero') - (x.tipo.clave === 'bombardero'))
+  }
+
+  elegirBlanco(p, visibles, amenazas) {
+    const c = p.centro(_a).clone()
+    let mejor = null
+    let puntaje = -Infinity
+    for (const r of visibles) {
+      const d = r.centro(_b).distanceTo(c)
+      let s = -d / 400
+      if (this.config.usaContras) {
+        s += (multiplicadorDaño(p.tipo.clave, r.tipo.clave) - 1) * 4
+        s -= (multiplicadorDaño(r.tipo.clave, p.tipo.clave) - 1) * 1.5
+        s += (1 - r.salud().estructura) * 1.5 // rematar heridos
+      }
+      if (this.tactica.concentrar) {
+        // Concentrar el fuego: suma si otros batallones propios ya le tiran.
+        const aliados = this.batalla.batallones.filter((x) => x.equipo === ENEMIGO && x.viva && x.orden.objetivo === r).length
+        s += Math.min(aliados, 3) * 0.5
+        if (amenazas.includes(r)) s += 1.5
+      }
+      s += Math.random() * 0.5
+      if (s > puntaje) {
+        puntaje = s
+        mejor = r
+      }
+    }
+    return mejor
+  }
 }
+
+export { JUGADOR }

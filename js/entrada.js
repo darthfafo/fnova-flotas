@@ -10,7 +10,7 @@ const ORDEN_TACTICAS = Object.keys(TACTICAS)
 const _v = new THREE.Vector3()
 
 export class Entrada {
-  constructor({ elemento, camara, orbital, batalla, alCambiarSeleccion, alAviso, alPausa, alSensores }) {
+  constructor({ elemento, camara, orbital, batalla, alCambiarSeleccion, alAviso, alPausa, alSensores, alPausaTactica, alVelocidad, alOrden }) {
     this.el = elemento
     this.camara = camara
     this.orbital = orbital
@@ -25,6 +25,9 @@ export class Entrada {
     this.alAviso = alAviso
     this.alPausa = alPausa
     this.alSensores = alSensores
+    this.alPausaTactica = alPausaTactica
+    this.alVelocidad = alVelocidad
+    this.alOrden = alOrden
     this.ultimoClic = { t: 0, b: null }
     this.activa = true
 
@@ -75,7 +78,7 @@ export class Entrada {
     let dMejor = Infinity
     const s = {}
     for (const n of this.batalla.naves) {
-      if (!n.viva) continue
+      if (!n.viva || !this.batalla.esVisible(JUGADOR, n)) continue
       this.aPantalla(n.pos, s)
       if (s.z > 1) continue
       const r = Math.max(14, this.radioEnPantalla(n) * 0.9)
@@ -162,6 +165,7 @@ export class Entrada {
         this.batalla.ordenarAtacar(this.seleccionados, n.batallon)
         this.alAviso(null)
         this.modo = 'normal'
+        this.alOrden?.('atacar')
       }
       return
     }
@@ -178,6 +182,7 @@ export class Entrada {
         if (s.z < 1 && s.x >= x0 && s.x <= x1 && s.y >= y0 && s.y <= y1) dentro.add(n.batallon)
       }
       this.seleccionar(dentro, a.shift)
+      this.alOrden?.('seleccion')
       return
     }
     const n = this.naveBajo(e.offsetX, e.offsetY)
@@ -191,6 +196,7 @@ export class Entrada {
         this.alCambiarSeleccion()
       } else this.seleccionar([n.batallon], a.shift)
       this.ultimoClic = { t: ahora, b: n.batallon }
+      this.alOrden?.('seleccion')
     } else if (!a.shift) this.seleccionar([])
   }
 
@@ -204,11 +210,13 @@ export class Entrada {
     if (n && n.equipo !== JUGADOR) {
       this.batalla.ordenarAtacar(sel, n.batallon)
       this.marca = { pos: n.pos.clone(), t: 0.6, color: '#ff5a4a' }
+      this.alOrden?.('atacar')
     } else {
       const c = this.centroSeleccion()
       const p = this.puntoEnPlano(e.offsetX, e.offsetY, c.y)
       this.batalla.ordenarMover(sel, p)
       this.marca = { pos: p, t: 0.6, color: '#6fe0a0' }
+      this.alOrden?.('mover')
     }
   }
 
@@ -245,6 +253,8 @@ export class Entrada {
     this.batalla.ordenarMover(this.seleccionados, m.punto.clone())
     this.marca = { pos: m.punto.clone(), t: 0.6, color: '#6fe0a0' }
     this.cancelarModo()
+    this.alOrden?.('mover3d')
+    this.alOrden?.('mover')
   }
 
   cancelarModo() {
@@ -291,6 +301,12 @@ export class Entrada {
       case ' ':
         e.preventDefault()
         this.alSensores()
+        break
+      case 'p':
+        this.alPausaTactica?.()
+        break
+      case 'r':
+        this.alVelocidad?.()
         break
       case 'Tab': {
         e.preventDefault()

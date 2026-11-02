@@ -8,6 +8,9 @@ import { Particulas, Proyectiles, Motores, Escudos, Ondas, COLOR_ESCUDO, COLOR_F
 import { Sonido } from './motor/sonido.js'
 import { Batalla, JUGADOR, ENEMIGO } from './sim/batalla.js'
 import { ComandanteIA } from './sim/ia.js'
+import { Terreno, MAPAS } from './sim/terreno.js'
+import { Terreno3D } from './motor/terreno3d.js'
+import { Tutorial, tutorialVisto } from './ui/tutorial.js'
 import { Entrada } from './entrada.js'
 import { Hud } from './ui/hud.js'
 import { Menus, mostrarPantalla } from './ui/menus.js'
@@ -53,6 +56,12 @@ let pausa = false
 const menus = new Menus({
   alCombatir: (config) => iniciarBatalla(config),
   alAbrirAyuda: (enBatalla) => abrirAyuda(enBatalla),
+  // Batalla chica y fácil, con el tutorial desde el primer paso.
+  alTutorial: () =>
+    iniciarBatalla(
+      { ...menus.config, presupuesto: 2500, dificultad: 'facil', mapa: 'mixto', flota: { caza: 2, corbeta: 1, bombardero: 1, crucero: 1, acorazado: 0 } },
+      { tutorial: true },
+    ),
 })
 
 cargarModelos((f) => menus.progreso(f))
@@ -85,6 +94,8 @@ document.body.addEventListener('click', (e) => {
   }
   if (a === 'pausa' && partida) abrirAyuda(true)
   if (a === 'sensores' && partida) alternarSensores()
+  if (a === 'pausa-tactica' && partida) alternarPausaTactica()
+  if (a === 'velocidad' && partida) alternarVelocidad()
   if (a === 'sonido') {
     sonido.iniciar()
     e.target.closest('[data-accion]').classList.toggle('activo', sonido.alternar())
@@ -152,17 +163,34 @@ function desplegar(batalla, equipo, flota) {
   return batallones
 }
 
-function iniciarBatalla(config) {
+function alternarPausaTactica() {
+  partida.pausaTactica = !partida.pausaTactica
+  partida.hud.estadoTiempo(partida.pausaTactica, partida.velocidad)
+  partida.tutorial?.notificar('pausaTactica')
+}
+
+function alternarVelocidad() {
+  partida.velocidad = partida.velocidad === 1 ? 2 : 1
+  partida.hud.estadoTiempo(partida.pausaTactica, partida.velocidad)
+}
+
+function iniciarBatalla(config, opciones = {}) {
   terminarBatalla()
   sonido.iniciar()
   sonido.ambiente(true)
   document.getElementById('btn-sonido').classList.toggle('activo', sonido.activo)
   const faccionEnemiga = config.faccion === 'guardianes' ? 'inquisidores' : 'guardianes'
+  const flotaRival = flotaEnemiga(config.dificultad, config.presupuesto)
+  const tipoMapa = config.mapa in MAPAS ? config.mapa : Object.keys(MAPAS)[Math.floor(Math.random() * 4)]
+  // El terreno se estira con el tamaño de las flotas.
+  const batallonesMax = Math.max(...[config.flota, flotaRival].map((f) => Object.values(f).reduce((a, b) => a + b, 0)))
+  const terreno = new Terreno(tipoMapa, THREE.MathUtils.clamp(batallonesMax / 14, 1, 1.8))
   const batalla = new Batalla({
     faccionJugador: config.faccion,
     faccionEnemiga,
     plantilla,
     crearMalla: crearMallaNave,
+    terreno,
   })
   renderer.setPixelRatio(Math.min(window.devicePixelRatio, config.calidad === 'baja' ? 1 : 1.5))
   renderer.setSize(contenedor.clientWidth, contenedor.clientHeight)
@@ -170,7 +198,8 @@ function iniciarBatalla(config) {
   motores.puntos.material.uniforms.escala.value = escalaPuntos()
 
   const propios = desplegar(batalla, JUGADOR, config.flota)
-  desplegar(batalla, ENEMIGO, flotaEnemiga(config.dificultad, config.presupuesto))
+  desplegar(batalla, ENEMIGO, flotaRival)
+  const terreno3d = new Terreno3D(escena, terreno)
   for (const n of batalla.naves) escena.add(n.malla)
 
   const ia = new ComandanteIA(batalla, config.dificultad)
@@ -184,10 +213,20 @@ function iniciarBatalla(config) {
     alAviso: (t, s) => hud?.aviso(t, s),
     alPausa: () => abrirAyuda(true),
     alSensores: () => alternarSensores(),
+    alPausaTactica: () => alternarPausaTactica(),
+    alVelocidad: () => alternarVelocidad(),
+    alOrden: (evento) => partida?.tutorial?.notificar(evento),
   })
-  hud = new Hud({ batalla, entrada, faccion: config.faccion })
-  partida = { batalla, ia, entrada, hud, config, fin: 0, fps: { t: 0, n: 0, ajustado: config.calidad === 'baja' } }
+  hud = new Hud({ batalla, entrada, faccion: config.faccion, orbital })
+  partida = {
+    batalla, ia, entrada, hud, config, terreno3d,
+    fin: 0,
+    pausaTactica: false,
+    velocidad: 1,
+    fps: { t: 0, n: 0, ajustado: config.calidad === 'baja' },
+  }
   pausa = false
+  if (opciones.tutorial || !tutorialVisto()) partida.tutorial = new Tutorial({ orbital, ia })
 
   // Cámara detrás de la flota propia, mirando hacia el enemigo.
   const centro = new THREE.Vector3()
@@ -204,12 +243,15 @@ function iniciarBatalla(config) {
 
   for (const p of document.querySelectorAll('.pantalla')) p.classList.remove('visible')
   hud.registrar(`Flota ${FACCIONES[faccionEnemiga].nombre} detectada. A tus puestos, comandante.`)
+  hud.registrar(`Mapa: ${MAPAS[tipoMapa].nombre}`)
 }
 
 function terminarBatalla() {
   if (!partida) return
   for (const n of partida.batalla.naves) if (n.malla) escena.remove(n.malla)
   partida.entrada.destruir()
+  partida.terreno3d.destruir()
+  partida.tutorial?.destruir()
   sonido.ambiente(false)
   partida.hud.destruir()
   partida = null
@@ -246,6 +288,7 @@ const _v = new THREE.Vector3()
 const _n = new THREE.Vector3()
 const colorDisparo = new THREE.Color()
 const COLOR_ESTELA_TORPEDO = new THREE.Color(0.5, 0.3, 0.12)
+const COLOR_POLVO = new THREE.Color(0.45, 0.38, 0.3)
 
 function procesarEventos(batalla) {
   for (const ev of batalla.eventos) {
@@ -258,6 +301,10 @@ function procesarEventos(batalla) {
       for (let i = 0; i < 4; i++)
         particulas.emitir(ev.pos, _v.randomDirection().multiplyScalar(6), COLOR_FLAK, 5 + Math.random() * 4, 0.6 + Math.random() * 0.5, 1.5)
       sonido.reproducir('flak', ev.pos, camara, 0.7)
+    } else if (ev.tipo === 'impactoRoca') {
+      particulas.chispas(ev.pos, _n.randomDirection(), COLOR_POLVO, 6, 25)
+      if (ev.arma === 'torpedo' || ev.arma === 'cañon') particulas.explosion(ev.pos, 2, COLOR_FUEGO, 8)
+      else particulas.emitir(ev.pos, _v.set(0, 0, 0), COLOR_POLVO, 6, 0.8, 1.5)
     } else if (ev.tipo === 'impacto') {
       const n = ev.nave
       _n.copy(ev.pos).sub(n.pos).normalize()
@@ -298,6 +345,8 @@ function sincronizarNaves(batalla, dt) {
   for (const n of batalla.naves) {
     const m = n.malla
     if (!m) continue
+    // Las naves enemigas fuera de tus sensores no se dibujan.
+    m.visible = !n.viva || n.equipo === JUGADOR || batalla.esVisible(JUGADOR, n)
     m.position.copy(n.pos)
     m.quaternion.copy(n.quat)
     m.userData.cuerpo.rotation.z = n.alabeo
@@ -342,15 +391,18 @@ function cuadro() {
   requestAnimationFrame(cuadro)
   const dt = Math.min(reloj.getDelta(), 0.1)
   const p = partida
-  if (p && !pausa) {
-    const pasos = Math.ceil(dt / PASO)
-    for (let i = 0; i < pasos; i++) p.batalla.paso(dt / pasos)
-    p.ia.actualizar(dt)
+  if (p && !pausa) p.tutorial?.actualizar(dt)
+  if (p && !pausa && !p.pausaTactica) {
+    const dtJuego = dt * p.velocidad
+    const pasos = Math.ceil(dtJuego / PASO)
+    for (let i = 0; i < pasos; i++) p.batalla.paso(dtJuego / pasos)
+    p.ia.actualizar(dtJuego)
     procesarEventos(p.batalla)
-    sincronizarNaves(p.batalla, dt)
-    particulas.actualizar(dt)
-    escudos.actualizar(dt)
-    ondas.actualizar(dt)
+    sincronizarNaves(p.batalla, dtJuego)
+    particulas.actualizar(dtJuego)
+    escudos.actualizar(dtJuego)
+    ondas.actualizar(dtJuego)
+    p.terreno3d.actualizar(dtJuego)
     for (const pr of p.batalla.proyectiles)
       if (pr.tipo === 'torpedo') particulas.emitir(pr.pos, _n.set(0, 0, 0), COLOR_ESTELA_TORPEDO, 3, 0.9, 1.5)
     proyectiles.dibujar(p.batalla.proyectiles)
@@ -373,7 +425,10 @@ function cuadro() {
   orbital.actualizar(dt)
   fondo.position.copy(camara.position)
   renderer.render(escena, camara)
-  if (partida) partida.hud.dibujar(pausa ? 0 : dt)
+  if (partida) {
+    // En pausa táctica la cámara se mueve libre: las mallas siguen donde estaban.
+    partida.hud.dibujar(pausa ? 0 : dt)
+  }
 }
 cuadro()
 

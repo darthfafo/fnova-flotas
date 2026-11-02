@@ -1,5 +1,6 @@
 // Pantallas fuera de la batalla: título, facción, armado de flota y fin.
 import { FACCIONES, TIPOS, ORDEN_TIPOS, DIFICULTADES, PRESUPUESTO_BASE, PRESUPUESTOS, PRESUPUESTO_MIN, PRESUPUESTO_MAX } from '../datos.js'
+import { MAPAS } from '../sim/terreno.js'
 
 const $ = (s) => document.querySelector(s)
 
@@ -8,13 +9,14 @@ export function mostrarPantalla(id) {
 }
 
 export class Menus {
-  constructor({ alCombatir, alAbrirAyuda }) {
+  constructor({ alCombatir, alAbrirAyuda, alTutorial }) {
     this.config = {
       faccion: 'guardianes',
       dificultad: 'normal',
       calidad: guardado('calidad', 'alta'),
       presupuesto: limitar(Number(guardado('presupuesto', PRESUPUESTO_BASE)) || PRESUPUESTO_BASE),
       flota: { caza: 3, corbeta: 2, bombardero: 2, crucero: 2, acorazado: 0 },
+      mapa: guardado('mapa', 'mixto'),
     }
     this.alCombatir = alCombatir
     this.armarFacciones()
@@ -25,6 +27,7 @@ export class Menus {
       const a = e.target.closest('[data-accion]')?.dataset.accion
       if (!a) return
       if (a === 'nueva') mostrarPantalla('pantalla-faccion')
+      else if (a === 'tutorial') alTutorial()
       else if (a === 'controles') alAbrirAyuda(false)
       else if (a === 'volver-titulo' || a === 'menu') mostrarPantalla('pantalla-titulo')
       else if (a === 'volver-faccion') mostrarPantalla('pantalla-faccion')
@@ -135,6 +138,20 @@ export class Menus {
       b.onclick = () => this.cambiarPresupuesto(p.valor, true)
       sp.appendChild(b)
     }
+    const sm = $('#selector-mapa')
+    for (const [k, m] of [...Object.entries(MAPAS), ['azar', { corto: 'Al azar', descripcion: 'Un mapa sorpresa.' }]]) {
+      const b = document.createElement('button')
+      b.className = 'btn'
+      b.textContent = m.corto
+      b.title = m.descripcion
+      b.dataset.mapa = k
+      b.onclick = () => {
+        this.config.mapa = k
+        try { localStorage.setItem('mapa', k) } catch {}
+        this.refrescarFlota()
+      }
+      sm.appendChild(b)
+    }
     for (const b of document.querySelectorAll('[data-presupuesto]'))
       b.onclick = () => this.cambiarPresupuesto(this.config.presupuesto + Number(b.dataset.presupuesto))
     this.refrescarFlota()
@@ -190,6 +207,8 @@ export class Menus {
     for (const b of document.querySelectorAll('[data-pres]')) b.classList.toggle('activo', Number(b.dataset.pres) === total)
     for (const b of document.querySelectorAll('[data-dif]')) b.classList.toggle('activo', b.dataset.dif === this.config.dificultad)
     for (const b of document.querySelectorAll('[data-cal]')) b.classList.toggle('activo', b.dataset.cal === this.config.calidad)
+    for (const b of document.querySelectorAll('[data-mapa]')) b.classList.toggle('activo', b.dataset.mapa === this.config.mapa)
+    $('#nota-mapa').textContent = (MAPAS[this.config.mapa] ?? { descripcion: 'Un mapa sorpresa.' }).descripcion
     $('#btn-combatir').disabled = u === 0
   }
 

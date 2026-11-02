@@ -17,6 +17,14 @@ En tu compu:
 Necesita un servidor local (los navegadores no cargan modelos 3D desde `file://`)
 e internet para bajar Three.js desde el CDN.
 
+## Novedades de juego
+
+- **Mapas:** abierto, cinturón de asteroides (las rocas frenan los disparos), nebulosas (esconden a las naves hasta que disparan o están muy cerca) y mixto.
+- **IA:** se retira con daños para repararse junto a sus capitales, escolta a sus capitales, concentra el fuego y en Difícil flanquea.
+- **Reparación de campo:** las naves chicas se reparan cerca de una capital propia si no reciben fuego.
+- **Tiempo:** P = pausa táctica (se siguen dando órdenes), R = velocidad ×2.
+- **Minimapa** y **tutorial** de la primera batalla (se repite desde el botón Tutorial).
+
 ## Estructura
 
 ```
