@@ -46,23 +46,25 @@
       <div class="marca">FNOVA</div>
       <h1 class="titulo-epico">Ecos de la Quema</h1>
       <div class="titulo-flotas"><span>Flotas</span></div>
-      <p class="sub" id="lema-portada">Tres siglos después de la Quema, la guerra vuelve a las estrellas.</p>
+      <p class="lema-portada" id="lema-portada">Estrategia espacial en 3D: armás tu flota, la llevás a la batalla y la comandás en tiempo real.</p>
+      <ul class="gancho">
+        <li><b>Cada nave tiene su presa</b><span>Cazas, bombarderos y acorazados que se contrarrestan entre sí</span></li>
+        <li><b>El terreno pelea</b><span>Rocas que frenan disparos, nebulosas para emboscar</span></li>
+        <li><b>IA o amigos</b><span>Subí al Salón de la Fama o desafiá a otro comandante</span></li>
+      </ul>
       <div class="botonera vertical" id="botones-titulo">
         <button class="btn grande" data-accion="nueva">Jugar</button>
         <div class="fila-botones">
           <button class="btn" data-accion="rapida" title="Cualquier facción, flota sugerida y mapa al azar">Partida rápida</button>
           <button class="btn" data-accion="multijugador" title="Batallas contra otros comandantes">Multijugador</button>
         </div>
-        <button class="btn" data-accion="salon">Salón de la Fama</button>
         <button class="btn" data-accion="tutorial">Tutorial</button>
-        <div class="fila-botones">
-          <button class="btn" data-accion="prologo">Prólogo</button>
-          <button class="btn" data-accion="controles">Controles</button>
-        </div>
       </div>
     </div>
     <div class="pie-portada" id="pie-portada" hidden>
-      <span class="guardianes">Guardianes</span><span class="contra">contra</span><span class="inquisidores">Inquisidores</span>
+      <button class="enlace" data-accion="prologo">Ver el prólogo</button>
+      <span>·</span>
+      <button class="enlace" data-accion="controles">Controles</button>
     </div>
   </section>
 
@@ -187,7 +189,10 @@
   <aside class="panel tutorial" id="tutorial" hidden></aside>
 
   <!-- Cuenta de comandante: botón flotante en los menús -->
-  <button class="btn chico btn-cuenta" id="btn-cuenta" data-accion="cuenta">Iniciar sesión</button>
+  <div class="barra-portada">
+    <button class="btn chico btn-cuenta" id="btn-cuenta" data-accion="cuenta">Iniciar sesión</button>
+    <button class="btn chico" data-accion="salon">🏆 Salón de la Fama</button>
+  </div>
 
   <section id="pantalla-cuenta" class="pantalla superpuesta">
     <div class="panel ventana-cuenta">
