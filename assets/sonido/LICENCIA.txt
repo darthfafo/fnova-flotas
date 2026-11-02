@@ -1,0 +1,6 @@
+Sonidos (todos CC0 1.0, dominio público — https://creativecommons.org/publicdomain/zero/1.0/),
+convertidos de .ogg/.mp3 a .m4a (AAC):
+- Sci-Fi Sounds e Impact Sounds de Kenney (https://kenney.nl): laserSmall, laserLarge, thrusterFire,
+  forceField, explosionCrunch, lowFrequency_explosion, spaceEngineLow, spaceEngineLarge, impactMetal,
+  impactMetal_heavy, impactPlate_heavy.
+- space-wind: "Space Winds" de aquinn (https://opengameart.org/content/space-winds).

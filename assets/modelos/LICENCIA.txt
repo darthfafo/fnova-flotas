@@ -2,3 +2,11 @@ Modelos de naves: "Ultimate Spaceships Pack" de Quaternius (https://quaternius.c
 Licencia CC0 1.0 Universal (dominio público) — https://creativecommons.org/publicdomain/zero/1.0/
 Fuente usada: github.com/Malcolmnixon/Quaternius-Ultimate-Spaceships-Pack (CC0),
 convertidos de Godot a .glb con herramientas/tscn_a_glb.py.
+
+Modelos con licencia CC BY 4.0 (https://creativecommons.org/licenses/by/4.0/),
+empaquetados con herramientas/gltf_a_glb.py (texturas reducidas) y teñidos por facción en el juego:
+- rlab-fragata.glb: "Assault Frigate" (https://sketchfab.com/3d-models/assault-frigate-a39d5917f75e433fae7a95635578f228) de Rakshaan (https://sketchfab.com/rakshaan)
+- rlab-ranger.glb: "Space Ranger SR1" (https://sketchfab.com/3d-models/space-ranger-sr1-c9f86bbff8664954a22bef08545ff1f1) de Rakshaan
+- rylek-skiff.glb: "Rylek's Raiders: Fighter class Skiff" (https://sketchfab.com/3d-models/ryleks-raiders-fighter-class-skiff-a2b5d8ad10694182953f0cd30c05a88b) de Gwyvern (https://sketchfab.com/Gwyvern)
+- rylek-galley.glb: "Rylek's Raiders: Scavenger Class Galley" (https://sketchfab.com/3d-models/ryleks-raiders-scavenger-class-galley-ebfe1790fe25478f9d650815716d30e5) de Gwyvern
+- rylek-galleon.glb: "Rylek's Raiders: Predator class galleon" (https://sketchfab.com/3d-models/ryleks-raiders-predator-class-galleon-82108cf3ea684fd789d4e579633103f1) de Gwyvern

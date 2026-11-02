@@ -134,6 +134,8 @@ function cerrarAyuda() {
 document.body.addEventListener('click', (e) => {
   const a = e.target.closest('[data-accion]')?.dataset.accion
   if (a === 'cerrar-ayuda') cerrarAyuda()
+  if (a === 'creditos') document.getElementById('pantalla-creditos').classList.add('visible')
+  if (a === 'cerrar-creditos' || e.target.id === 'pantalla-creditos') document.getElementById('pantalla-creditos').classList.remove('visible')
   if (a === 'abandonar') {
     cerrarAyuda()
     if (partida?.red) {
@@ -350,7 +352,11 @@ function iniciarBatalla(config, opciones = {}) {
     alSensores: () => alternarSensores(),
     alPausaTactica: () => !red && alternarPausaTactica(),
     alVelocidad: () => !red && alternarVelocidad(),
-    alOrden: (evento) => partida?.tutorial?.notificar(evento),
+    alOrden: (evento) => {
+      partida?.tutorial?.notificar(evento)
+      // Al dar una orden de movimiento o ataque, se oyen los propulsores.
+      if ((evento === 'mover' || evento === 'atacar') && entrada.seleccionados.length) sonido.reproducir('propulsor', entrada.centroSeleccion(), camara, 0.9)
+    },
   })
   hud = new Hud({ batalla, entrada, faccion: config.faccion, orbital })
   const tactil = new Tactil({ elemento: renderer.domElement, entrada, orbital })
@@ -625,6 +631,19 @@ function procesarEventos(batalla) {
   batalla.eventos.length = 0
 }
 
+// Rumor de motores: cuánto se mueven las naves que la cámara tiene cerca.
+function sonarMotores(batalla) {
+  let chicas = 0
+  let capitales = 0
+  for (const n of batalla.naves) {
+    if (!n.viva || n.velocidad < 2) continue
+    const v = sonido.volumen(n.pos, camara) * Math.min(1, n.velocidad / (n.velocidadMax || 1))
+    if (n.esCapital) capitales += v * 0.8
+    else chicas += v * 0.15
+  }
+  sonido.motores(chicas, capitales)
+}
+
 function sincronizarNaves(batalla, dt, verTodo = false) {
   for (const n of batalla.naves) {
     const m = n.malla
@@ -687,6 +706,7 @@ function cuadro() {
     }
     procesarEventos(p.batalla)
     sincronizarNaves(p.batalla, dtJuego)
+    sonarMotores(p.batalla)
     particulas.actualizar(dtJuego)
     escudos.actualizar(dtJuego)
     ondas.actualizar(dtJuego)

@@ -15,13 +15,18 @@ class SinCache(http.server.SimpleHTTPRequestHandler):
     # Herramienta de desarrollo: el juego puede guardar una captura como
     # assets/img/<nombre>.jpg (ver __flotas.capturar en js/main.js). Solo
     # acepta pedidos desde esta misma computadora.
+    # También guarda audio decodificado por el navegador como
+    # descargas/wav/<nombre>.wav (para pasar .ogg a .m4a con afconvert).
     def do_POST(self):
-        nombre = self.path.removeprefix('/__captura/')
-        if self.client_address[0] not in ('127.0.0.1', '::1') or not nombre.replace('-', '').isalnum():
+        carpeta, ext = ('assets/img', '.jpg')
+        if self.path.startswith('/__audio/'):
+            carpeta, ext = ('descargas/wav', '.wav')
+        nombre = self.path.split('/')[-1]
+        if self.client_address[0] not in ('127.0.0.1', '::1') or not nombre.replace('-', '').replace('_', '').isalnum():
             self.send_error(403)
             return
         datos = self.rfile.read(int(self.headers.get('Content-Length', 0)))
-        with open(os.path.join('assets', 'img', nombre + '.jpg'), 'wb') as f:
+        with open(os.path.join(carpeta, nombre + ext), 'wb') as f:
             f.write(datos)
         self.send_response(204)
         self.end_headers()

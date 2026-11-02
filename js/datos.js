@@ -15,7 +15,7 @@ export const FACCIONES = {
     acento: 0x3fa9ff,
     acentoCss: '#3fa9ff',
     disparo: 0x7cc8ff,
-    modelos: { caza: 'challenger', corbeta: 'dispatcher', bombardero: 'omen', crucero: 'insurgent', acorazado: 'imperial' },
+    modelos: { caza: 'challenger', corbeta: 'rylek-skiff', bombardero: 'omen', crucero: 'rylek-galley', acorazado: 'rylek-galleon' },
     // Rasgo de batalla: aguantan más, pegan igual, se mueven un poco más lento.
     rasgo: {
       nombre: 'Disciplina del Crisol',
@@ -37,7 +37,7 @@ export const FACCIONES = {
     acento: 0xff4a2a,
     acentoCss: '#ff5a36',
     disparo: 0xffa040,
-    modelos: { caza: 'striker', corbeta: 'bob', bombardero: 'spitfire', crucero: 'zenith', acorazado: 'pancake' },
+    modelos: { caza: 'striker', corbeta: 'rlab-ranger', bombardero: 'spitfire', crucero: 'rlab-fragata', acorazado: 'pancake' },
     // Rasgo de batalla: pegan más y son más rápidos, con escudos más débiles.
     rasgo: {
       nombre: 'Tecnología prohibida',
