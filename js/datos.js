@@ -68,6 +68,8 @@ export const TIPOS = {
     velocidad: 78, giro: 2.6, aceleracion: 60,
     armas: [{ tipo: 'laser', daño: 6, cadencia: 0.32, alcance: 210, cono: 0.22 }],
     ventaja: { bombardero: 1.75 },
+    // Contra naves chicas se pone en la cola del enemigo y lo persigue.
+    maniobra: 'persecucion',
     rol: 'Caza parejo y rápido. Intercepta Bombarderos antes de que lleguen a tus capitales.',
   },
   corbeta: {
@@ -81,8 +83,11 @@ export const TIPOS = {
     escudoMax: 35, estructuraMax: 130,
     agilidad: 0.85, // le acierta un 15% menos todo lo que le dispara (salvo el flak)
     velocidad: 92, giro: 3.0, aceleracion: 75,
-    armas: [{ tipo: 'laser', daño: 10, cadencia: 0.3, alcance: 180, cono: 0.25 }],
-    ventaja: { caza: 1.9 },
+    // Ametralladoras en torretas laterales: dispara en un cono ancho mientras
+    // orbita al blanco.
+    armas: [{ tipo: 'laser', daño: 10, cadencia: 0.3, alcance: 180, cono: 0.75 }],
+    ventaja: { caza: 1.4 },
+    maniobra: 'orbita',
     rol: 'Interceptor ágil: le acierta menos todo lo que le dispara y destroza Cazas. Sufre contra el flak.',
   },
   bombardero: {
@@ -96,7 +101,9 @@ export const TIPOS = {
     escudoMax: 120, estructuraMax: 420,
     velocidad: 50, giro: 1.4, aceleracion: 30,
     armas: [{ tipo: 'torpedo', daño: 120, cadencia: 2.2, alcance: 300, cono: 0.35 }],
-    ventaja: { crucero: 2, acorazado: 1.75 },
+    // Se alinea con su batallón y hace pasadas rectas; sale en una curva amplia.
+    maniobra: 'pasada',
+    ventaja: { crucero: 2.2, acorazado: 2.1 },
     rol: 'Torpedos lentos y devastadores contra naves capitales. Indefenso ante cazas.',
   },
   crucero: {
@@ -116,7 +123,7 @@ export const TIPOS = {
       { tipo: 'flak', daño: 8, cadencia: 0.55, alcance: 420, montaje: [-0.3, 0.2, -0.2] },
       { tipo: 'flak', daño: 8, cadencia: 0.55, alcance: 420, montaje: [0.3, 0.2, -0.2] },
     ],
-    ventaja: { caza: 1.35, corbeta: 1.5, bombardero: 1.25 },
+    ventaja: { caza: 1.6, corbeta: 1.5, bombardero: 1.25 },
     rol: 'Torretas de flak que barren Corbetas y Cazas. Necesita escolta contra los Bombarderos.',
   },
   acorazado: {

@@ -422,27 +422,14 @@ export class Batalla {
           }
           llegar = false
         } else {
-          n.tiempoFase -= dt
-          const distRuptura = obj.esCapital ? obj.radio + 25 : 35
-          if (n.fase === 'acercarse') {
-            // Apunta adelantándose al movimiento del blanco.
-            const tVuelo = dist / PROYECTIL[t.armas[0].tipo].velocidad
-            destino.copy(obj.pos).addScaledVector(obj.adelante, obj.velocidad * tVuelo)
-            if (dist < distRuptura) {
-              n.fase = 'romper'
-              n.tiempoFase = (obj.esCapital ? 1.4 : 1.1) + Math.random() * 0.8
-              // Sigue de largo y abre hacia un costado al azar (perpendicular
-              // al avance), como una pasada de ametrallamiento.
-              const adelante = n.adelante
-              const lateral = _w.set(Math.random() - 0.5, (Math.random() - 0.5) * 0.8, Math.random() - 0.5)
-              lateral.addScaledVector(adelante, -lateral.dot(adelante)).normalize()
-              const largo = obj.esCapital ? 140 + obj.radio * 1.5 : 180
-              n.puntoRuptura.copy(n.pos).addScaledVector(adelante, largo).addScaledVector(lateral, largo * 0.6)
-            }
-          } else {
-            destino.copy(n.puntoRuptura)
-            if (n.tiempoFase <= 0) n.fase = 'acercarse'
-          }
+          // Naves chicas: cada tipo pelea a su manera (ver "maniobra" en datos.js).
+          // Contra una capital, cazas y corbetas hacen pasadas: perseguirla u
+          // orbitarla dentro del alcance de su flak sería suicida.
+          const maniobra = obj.esCapital && t.maniobra !== 'pasada' ? 'pasada-suelta' : t.maniobra
+          if (maniobra === 'persecucion') velDeseada = this.persecucion(n, obj, dist, dt, destino, velDeseada)
+          else if (maniobra === 'orbita') this.orbita(n, obj, dist, destino)
+          else if (maniobra === 'pasada') this.pasadaEnFormacion(n, obj, dt, destino)
+          else this.pasadaSuelta(n, obj, dist, dt, destino)
           llegar = false
         }
       }
@@ -473,19 +460,29 @@ export class Batalla {
           b.orden = { tipo: 'quieto' }
           b.topeVelocidad = Infinity
         }
-      } else velDeseada = Math.min(velDeseada, dist * (n.esCapital ? 0.35 : 0.9) + 1)
+      } else velDeseada = Math.min(velDeseada, dist * (n.esCapital ? 0.22 : 0.9) + 1)
     }
     const anterior = n.adelante.clone()
     if (dist > 0.5 && velDeseada > 0) {
       aDestino.divideScalar(dist)
       if (this.terreno.asteroides.length)
         this.terreno.desviar(n.pos, aDestino, n.radio, Math.min(dist, n.esCapital ? 260 : 160))
-      n.quat.rotateTowards(quatHacia(aDestino, _q), t.giro * dt)
+      if (n.esCapital) {
+        // Inercia: la velocidad de giro crece y decrece de a poco. Una capital
+        // mal orientada tarda en corregir (y queda expuesta mientras tanto).
+        const objetivoQ = quatHacia(aDestino, _q)
+        const angulo = n.quat.angleTo(objetivoQ)
+        const deseado = Math.min(t.giro, angulo * 1.2)
+        n.velGiro = THREE.MathUtils.clamp(deseado, (n.velGiro ?? 0) - t.giro * 0.6 * dt, (n.velGiro ?? 0) + t.giro * 0.45 * dt)
+        n.quat.rotateTowards(objetivoQ, n.velGiro * dt)
+      } else n.quat.rotateTowards(quatHacia(aDestino, _q), t.giro * dt)
     }
     const adelante = n.adelante
     const alineado = dist > 0.5 ? Math.max(0, adelante.dot(aDestino)) : 1
     const objetivoVel = velDeseada * (n.esCapital ? alineado * alineado : Math.max(0.4, alineado))
-    const dv = THREE.MathUtils.clamp(objetivoVel - n.velocidad, -t.aceleracion * 1.5 * dt, t.aceleracion * dt)
+    // Las capitales frenan más despacio de lo que aceleran (deriva).
+    const freno = n.esCapital ? 0.7 : 1.5
+    const dv = THREE.MathUtils.clamp(objetivoVel - n.velocidad, -t.aceleracion * freno * dt, t.aceleracion * dt)
     n.velocidad = Math.max(0, n.velocidad + dv)
     n.pos.addScaledVector(adelante, n.velocidad * dt)
     if (this.terreno.asteroides.length) this.terreno.expulsar(n.pos, n.radio)
@@ -494,6 +491,127 @@ export class Batalla {
     if (!n.esCapital) {
       const giroLateral = anterior.cross(adelante).y / Math.max(dt, 1e-3)
       n.alabeo = THREE.MathUtils.lerp(n.alabeo, THREE.MathUtils.clamp(-giroLateral * 0.6, -1.1, 1.1), 0.1)
+    }
+  }
+
+  // --- Maniobras de las naves chicas -----------------------------------------
+
+  // Pasada de ametrallamiento: se acerca adelantándose al blanco, se pasa de
+  // largo, abre hacia un costado y vuelve. Es lo que hacen los cazas contra
+  // las naves capitales.
+  pasadaSuelta(n, obj, dist, dt, destino) {
+    n.tiempoFase -= dt
+    const distRuptura = obj.esCapital ? obj.radio + 25 : 35
+    if (n.fase === 'acercarse') {
+      const tVuelo = dist / PROYECTIL[n.tipo.armas[0].tipo].velocidad
+      destino.copy(obj.pos).addScaledVector(obj.adelante, obj.velocidad * tVuelo)
+      if (dist < distRuptura) {
+        n.fase = 'romper'
+        n.tiempoFase = (obj.esCapital ? 1.4 : 1.1) + Math.random() * 0.8
+        const adelante = n.adelante
+        const lateral = _u.set(Math.random() - 0.5, (Math.random() - 0.5) * 0.8, Math.random() - 0.5)
+        lateral.addScaledVector(adelante, -lateral.dot(adelante)).normalize()
+        const largo = obj.esCapital ? 140 + obj.radio * 1.5 : 180
+        n.puntoRuptura.copy(n.pos).addScaledVector(adelante, largo).addScaledVector(lateral, largo * 0.6)
+      }
+    } else {
+      destino.copy(n.puntoRuptura)
+      if (n.tiempoFase <= 0) n.fase = 'acercarse'
+    }
+  }
+
+  // Persecución (cazas contra naves chicas): apunta a un punto detrás de la
+  // cola del enemigo y, una vez ahí, iguala su velocidad para no pasarse.
+  // Como el otro también gira, salen dogfights en espiral. Si queda
+  // demasiado encima, rompe un instante para no chocar.
+  persecucion(n, obj, dist, dt, destino, velDeseada) {
+    n.tiempoFase -= dt
+    if (n.fase === 'romper') {
+      destino.copy(n.puntoRuptura)
+      if (n.tiempoFase <= 0) n.fase = 'acercarse'
+      return velDeseada
+    }
+    const cola = 30 + obj.radio * 2
+    const tVuelo = dist / PROYECTIL.laser.velocidad
+    destino.copy(obj.pos).addScaledVector(obj.adelante, obj.velocidad * tVuelo - cola)
+    // ¿Ya está en la cola? (detrás del blanco y mirando hacia donde va)
+    _u.copy(n.pos).sub(obj.pos)
+    const detras = _u.dot(obj.adelante) < 0
+    if (detras && dist < cola * 2.2) velDeseada = Math.min(velDeseada, Math.max(obj.velocidad * 1.05, 20))
+    if (dist < obj.radio + 12) {
+      n.fase = 'romper'
+      n.tiempoFase = 0.5 + Math.random() * 0.4
+      n.puntoRuptura.copy(n.pos).addScaledVector(n.adelante, 90).add(_u.randomDirection().multiplyScalar(50))
+    }
+    return velDeseada
+  }
+
+  // Órbita (corbetas): giran alrededor del blanco a toda velocidad, cada una
+  // en su propio plano, metiéndose un poco hacia adentro para tenerlo en el
+  // cono de sus ametralladoras laterales.
+  orbita(n, obj, dist, destino) {
+    if (!n.ejeOrbita) n.ejeOrbita = new THREE.Vector3(Math.random() - 0.5, 1.6, Math.random() - 0.5).normalize().multiplyScalar(Math.random() < 0.5 ? 1 : -1)
+    const radio = obj.esCapital ? obj.radio + 70 : 60
+    const radial = _u.copy(n.pos).sub(obj.pos)
+    if (radial.lengthSq() < 1) radial.set(1, 0, 0)
+    radial.normalize()
+    // Lejos: va directo. Cerca: tangente a la órbita, cerrando hacia adentro.
+    if (dist > radio * 2.5) return destino.copy(obj.pos)
+    const tangente = _w.crossVectors(n.ejeOrbita, radial).normalize()
+    // Rumbo ~35° hacia adentro de la tangente: el blanco queda dentro del
+    // cono de tiro. Si se metió demasiado, abre hacia afuera.
+    const haciaAfuera = dist < radio * 0.6 ? 1.2 : 0
+    destino
+      .copy(obj.pos)
+      .addScaledVector(radial, radio * haciaAfuera)
+      .addScaledVector(tangente, radio * 0.7)
+      .addScaledVector(obj.adelante, obj.velocidad * 0.5)
+  }
+
+  // Pasada en formación (bombarderos): todo el batallón se alinea lejos del
+  // blanco, hace una pasada recta soltando torpedos y sale en una curva
+  // amplia para volver a alinearse. Durante la aproximación son blancos
+  // fáciles: para eso están los cazas de escolta.
+  pasadaEnFormacion(n, obj, dt, destino) {
+    const b = n.batallon
+    const vivas = b.naves.filter((x) => x.viva)
+    const lider = vivas[0]
+    const i = vivas.indexOf(n)
+    let p = b.pasada
+    if (!p || p.objetivo !== obj.batallon) {
+      const dir = obj.pos.clone().sub(b.centro(new THREE.Vector3())).normalize()
+      p = b.pasada = { objetivo: obj.batallon, fase: 'formar', dir, t: 0, punto: new THREE.Vector3() }
+      p.punto.copy(obj.pos).addScaledVector(dir, -(320 + obj.radio))
+    }
+    if (n === lider) p.t += dt
+    // Desplazamiento lateral de cada nave en la fila.
+    const lateral = _u.crossVectors(p.dir, ARRIBA).normalize().multiplyScalar((i - (vivas.length - 1) / 2) * (n.radio * 3))
+    if (p.fase === 'formar') {
+      destino.copy(p.punto).add(lateral)
+      if (n === lider && (lider.pos.distanceTo(p.punto) < 70 || p.t > 9)) {
+        p.fase = 'pasada'
+        p.t = 0
+        p.dir.copy(obj.pos).sub(lider.pos).normalize()
+      }
+    } else if (p.fase === 'pasada') {
+      // Recta hacia el blanco, corrigiendo apenas.
+      destino.copy(n.pos).addScaledVector(p.dir, 120).lerp(_w.copy(obj.pos).add(lateral), 0.25)
+      const pasado = _w.copy(obj.pos).sub(lider.pos).dot(p.dir) < -(obj.radio + 50)
+      if (n === lider && (pasado || p.t > 10)) {
+        p.fase = 'salida'
+        p.t = 0
+        const costado = _w.crossVectors(p.dir, ARRIBA).normalize().multiplyScalar(Math.random() < 0.5 ? 1 : -1)
+        p.punto.copy(obj.pos).addScaledVector(p.dir, 300).addScaledVector(costado, 260).addScaledVector(ARRIBA, (Math.random() - 0.3) * 160)
+      }
+    } else {
+      destino.copy(p.punto).add(lateral)
+      if (n === lider && (lider.pos.distanceTo(p.punto) < 90 || p.t > 7)) {
+        // Nueva aproximación desde donde quedaron.
+        p.fase = 'formar'
+        p.t = 0
+        p.dir.copy(obj.pos).sub(lider.pos).normalize()
+        p.punto.copy(obj.pos).addScaledVector(p.dir, -(320 + obj.radio))
+      }
     }
   }
 
