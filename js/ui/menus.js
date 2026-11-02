@@ -1,6 +1,7 @@
 // Pantallas fuera de la batalla: título, facción, armado de flota y fin.
 import { FACCIONES, TIPOS, ORDEN_TIPOS, DIFICULTADES, PRESUPUESTO_BASE, PRESUPUESTOS, PRESUPUESTO_MIN, PRESUPUESTO_MAX } from '../datos.js'
 import { MAPAS } from '../sim/terreno.js'
+import { ES_TACTIL } from '../tactil.js'
 
 const $ = (s) => document.querySelector(s)
 
@@ -16,7 +17,7 @@ export class Menus {
     this.config = {
       faccion: 'guardianes',
       dificultad: 'normal',
-      calidad: guardado('calidad', 'alta'),
+      calidad: guardado('calidad', ES_TACTIL ? 'baja' : 'alta'),
       presupuesto: limitar(Number(guardado('presupuesto', PRESUPUESTO_BASE)) || PRESUPUESTO_BASE),
       flota: { caza: 3, corbeta: 2, bombardero: 2, crucero: 2, acorazado: 0 },
       mapa: guardado('mapa', 'mixto'),

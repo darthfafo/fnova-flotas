@@ -2,7 +2,7 @@
 <html lang="es">
 <head>
   <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover" />
   <title>FNOVA · Ecos de la Quema · Flotas</title>
   <meta name="description" content="Batallas espaciales en 3D, en tiempo real. Armá tu flota y comandala contra la IA o contra tus amigos. Gratis, desde el navegador." />
   <link rel="icon" href="assets/img/icono.png" />
@@ -161,6 +161,8 @@
       </div>
       <div class="botonera chica">
         <span class="reloj" id="hud-reloj">00:00</span>
+        <button class="btn chico solo-tactil" data-accion="ver-flota" title="Mostrar u ocultar tu flota">Flota</button>
+        <button class="btn chico solo-tactil" data-accion="pantalla-completa" title="Pantalla completa">⛶</button>
         <button class="btn chico" data-accion="panel-sonido" id="btn-sonido" title="Música y efectos">Sonido</button>
         <button class="btn chico" data-accion="sensores" title="Vista táctica (Espacio)">Sensores</button>
         <button class="btn chico" data-accion="pausa-tactica" id="btn-pausa-tactica" title="Congela la batalla y te deja dar órdenes (P)">❚❚ Pausa</button>
@@ -174,6 +176,14 @@
     <section class="panel seleccion" id="hud-seleccion"></section>
 
     <nav class="panel comandos" id="hud-comandos">
+      <div class="grupo-comandos solo-tactil">
+        <button class="btn comando" data-cmd="todos"><b>☰</b>Todos</button>
+        <button class="btn comando" data-cmd="ninguno"><b>✕</b>Ninguno</button>
+      </div>
+      <div class="grupo-comandos solo-mover">
+        <button class="btn comando" data-cmd="subir"><b>▲</b>Subir</button>
+        <button class="btn comando" data-cmd="bajar"><b>▼</b>Bajar</button>
+      </div>
       <div class="grupo-comandos">
         <button class="btn comando" data-cmd="mover"><b>M</b>Mover</button>
         <button class="btn comando" data-cmd="atacar"><b>A</b>Atacar</button>
@@ -200,6 +210,7 @@
   </div>
 
   <aside class="panel tutorial" id="tutorial" hidden></aside>
+  <div class="girar-telefono" id="girar-telefono"><div>⟳</div><p>Girá el teléfono para jugar en horizontal</p></div>
 
   <!-- Cuenta de comandante: botón flotante en los menús -->
   <div class="barra-portada">
@@ -267,7 +278,22 @@
     <div class="panel ayuda">
       <h2 class="encabezado" id="ayuda-titulo">Controles</h2>
       <div class="columnas">
-        <div>
+        <div class="ayuda-tactil">
+          <h3>Pantalla táctil</h3>
+          <dl>
+            <dt>Tocar una nave tuya</dt><dd>Seleccionar su batallón (doble toque: todos los de ese tipo)</dd>
+            <dt>Mantener apretado</dt><dd>Sumar un batallón a la selección</dd>
+            <dt>Tocar el espacio vacío</dt><dd>Mover la selección ahí</dd>
+            <dt>Tocar un enemigo</dt><dd>Atacarlo con la selección</dd>
+            <dt>Arrastrar con un dedo</dt><dd>Girar la cámara</dd>
+            <dt>Dos dedos</dt><dd>Pellizcar: zoom · Arrastrar: desplazar la cámara</dd>
+            <dt>Mover · ▲ ▼</dt><dd>Mover en 3D: subí o bajá y tocá el destino</dd>
+            <dt>Todos · Ninguno</dt><dd>Seleccionar toda la flota o ninguna nave</dd>
+            <dt>Flota</dt><dd>Mostrar la lista de tus batallones</dd>
+            <dt>Minimapa</dt><dd>Tocar: llevar la cámara a ese lugar</dd>
+          </dl>
+        </div>
+        <div class="solo-escritorio">
           <h3>Touchpad</h3>
           <dl>
             <dt>Tocar / clic</dt><dd>Seleccionar batallón</dd>
@@ -280,7 +306,7 @@
             <dt>Minimapa</dt><dd>Clic: llevar la cámara · Dos dedos: mover la selección</dd>
           </dl>
         </div>
-        <div>
+        <div class="solo-escritorio">
           <h3>Teclado</h3>
           <dl>
             <dt>M</dt><dd>Mover en 3D (Shift cambia la altura, clic confirma)</dd>

@@ -391,7 +391,7 @@ h1 { margin: 0; font-size: clamp(3rem, 9vw, 6rem); letter-spacing: 0.3em; paddin
   .pie-presupuesto b { font-size: 1.2rem; }
   .btn.grande { padding: 9px 22px; font-size: 1rem; }
 }
-@media (max-width: 860px) {
+@media (max-width: 860px) and (orientation: portrait) {
   .armado-cuerpo { grid-template-columns: 1fr; overflow-y: auto; }
   .tipo-fila { grid-template-columns: 1fr auto; }
   .tipo-contras { display: none; }
@@ -648,3 +648,155 @@ body:has(#pantalla-titulo.visible) .barra-portada { display: flex; }
 }
 @media (max-width: 640px) { .gancho { grid-template-columns: 1fr; } }
 .portada .marca { text-transform: uppercase; letter-spacing: 0.45em; padding-left: 0.45em; margin-bottom: 4px; }
+
+/* =========================================================================
+   Celular y tablet (html.tactil la pone js/main.js con pointer: coarse)
+   ========================================================================= */
+body { -webkit-tap-highlight-color: transparent; overscroll-behavior: none; touch-action: manipulation; }
+#juego canvas { touch-action: none; }
+.solo-tactil, .solo-mover { display: none !important; }
+html.tactil .solo-tactil { display: inline-flex !important; }
+html.tactil .grupo-comandos.solo-tactil { display: flex !important; }
+html.tactil body.modo-mover .solo-mover { display: flex !important; }
+html.tactil .btn { -webkit-user-select: none; user-select: none; }
+
+/* Aviso para girar el teléfono durante la batalla. */
+.girar-telefono { display: none; }
+@media (orientation: portrait) {
+  html.tactil body.en-batalla .girar-telefono {
+    display: flex; position: fixed; inset: 0; z-index: 60; flex-direction: column; align-items: center; justify-content: center; gap: 12px;
+    background: rgba(2, 3, 8, 0.94); color: var(--texto); text-align: center; padding: 30px;
+  }
+  .girar-telefono div { font-size: 3.4rem; color: #f2c27e; animation: girar 2.4s ease-in-out infinite; }
+  .girar-telefono p { font-family: 'Cinzel', serif; letter-spacing: 0.08em; font-size: 1.1rem; margin: 0; }
+}
+@keyframes girar { 0%, 30% { transform: rotate(0); } 60%, 100% { transform: rotate(90deg); } }
+
+/* --- HUD en celular horizontal ------------------------------------------- */
+@media (max-height: 520px) {
+  html.tactil .barra-superior { padding: 4px 8px; padding-left: max(8px, env(safe-area-inset-left)); padding-right: max(8px, env(safe-area-inset-right)); }
+  html.tactil .faccion-hud { font-size: 0.72rem; letter-spacing: 0.12em; }
+  html.tactil .balance { gap: 6px; font-size: 0.75rem; }
+  html.tactil .balance-barra { width: 80px; height: 4px; }
+  html.tactil .reloj { display: none; }
+  html.tactil .btn.chico { padding: 5px 8px; font-size: 0.66rem; letter-spacing: 0.06em; }
+  html.tactil .botonera.chica { gap: 4px; }
+
+  /* La flota es un cajón que se abre con el botón "Flota". */
+  html.tactil .flota { display: none; top: 40px; left: max(8px, env(safe-area-inset-left)); max-height: calc(100vh - 118px); width: 214px; z-index: 6; }
+  html.tactil body.ver-flota .flota { display: block; }
+  html.tactil .ficha { width: 30px; padding: 3px 2px; }
+
+  /* Selección: solo nombre y barras, arriba de los comandos. */
+  html.tactil .seleccion { left: max(8px, env(safe-area-inset-left)); bottom: 64px; width: 230px; padding: 6px 10px; }
+  html.tactil .seleccion .detalle, html.tactil .seleccion .stats, html.tactil .seleccion .chips { display: none; }
+  html.tactil .seleccion h4 { font-size: 0.82rem; }
+
+  /* Comandos: una sola fila a lo ancho, con desplazamiento si no entran. */
+  html.tactil .comandos {
+    left: max(6px, env(safe-area-inset-left)); right: max(6px, env(safe-area-inset-right)); bottom: 6px;
+    flex-wrap: nowrap; justify-content: flex-start; overflow-x: auto; padding: 4px; gap: 6px; scrollbar-width: none;
+  }
+  html.tactil .comandos::-webkit-scrollbar { display: none; }
+  html.tactil .grupo-comandos { flex-shrink: 0; }
+  html.tactil .grupo-comandos + .grupo-comandos { padding-left: 6px; }
+  html.tactil .btn.comando { min-width: 52px; min-height: 44px; padding: 4px 6px; font-size: 0.64rem; }
+
+  html.tactil .minimapa { top: 40px; bottom: auto; right: max(8px, env(safe-area-inset-right)); width: 112px; height: 112px; }
+  html.tactil .registro { display: none; }
+  html.tactil .aviso-modo { top: 40px; font-size: 0.72rem; padding: 4px 10px; max-width: 60vw; text-align: center; }
+  html.tactil .cartel-pausa { top: 70px; font-size: 0.7rem; }
+  html.tactil .tutorial { top: 40px; width: min(400px, 58vw); min-width: 0; padding: 8px 12px; font-size: 0.8rem; }
+  html.tactil .tutorial h3 { font-size: 0.9rem; }
+  html.tactil .tutorial p { margin-bottom: 6px; }
+  html.tactil .panel-sonido { width: 220px; }
+}
+
+/* --- Menús en pantallas muy bajas (celular horizontal) ------------------- */
+@media (max-height: 520px) {
+  .pantalla { padding: 10px 14px; }
+  .portada .titulo-epico { font-size: clamp(1.6rem, 7vh, 2.4rem); }
+  .portada .marca { font-size: 0.8rem; }
+  .titulo-flotas { margin: 4px 0 2px; }
+  .lema-portada { font-size: 0.82rem; margin: 4px auto 6px; }
+  .gancho { display: none; }
+  .portada #botones-titulo { gap: 6px; margin-top: 6px; }
+  .portada [data-accion="nueva"] { padding: 9px 20px; font-size: 1.05rem; }
+  .btn { padding: 7px 14px; }
+  .barra-portada { top: 8px; left: 10px; }
+  .btn-sonido-menu { top: 8px; right: 10px; }
+  .pie-portada { bottom: 4px; }
+  .encabezado { margin-bottom: 10px; font-size: 1rem; }
+  .faccion-aviso { margin: -4px 0 8px; font-size: 0.82rem; }
+  .tarjeta-faccion .imagen { height: 80px; }
+  .tarjeta-faccion h3 { font-size: 1.25rem; }
+  .tarjeta-faccion .cuerpo { margin-top: -26px; padding: 0 14px 12px; }
+  .tarjeta-faccion p { display: none; }
+  .pantalla-armado.visible { padding-top: 40px; gap: 6px; }
+  .tipo-fila .stats { display: none; }
+  .tipo-fila .rol { -webkit-line-clamp: 1; }
+  .informe-cab h1 { font-size: 1.8rem; }
+  .informe-meta { margin-top: 4px; }
+  .tabla-tipos { font-size: 0.75rem; }
+  .ayuda { padding: 14px 16px; }
+}
+
+/* --- Ayuda: en pantallas táctiles se muestran los gestos ------------------ */
+.solo-escritorio { display: block; }
+html.tactil .ayuda .solo-escritorio { display: none; }
+html.tactil .ayuda .columnas { grid-template-columns: 1fr; }
+.ayuda-tactil { display: none; }
+html.tactil .ayuda-tactil { display: block; }
+
+/* Armado de flota en celular horizontal: dos columnas angostas y pie compacto. */
+@media (max-height: 520px) and (orientation: landscape) {
+  .armado-cuerpo { grid-template-columns: minmax(0, 1fr) 220px; }
+  .tipo-fila { grid-template-columns: minmax(0, 1fr) auto; gap: 8px; }
+  .tipo-contras { display: none; }
+  .tipo-fila .rol { display: none; }
+  .tipo-fila h4 small { display: none; }
+  .contador { gap: 4px; }
+  .contador .costo { width: 52px; font-size: 0.75rem; }
+  .ajustes .selector .btn { font-size: 0.66rem; padding: 4px 2px; }
+  .armado-pie { grid-template-columns: auto minmax(0, 1fr) auto; gap: 10px; padding: 6px 10px; }
+  .pie-presupuesto .fila-titulo { display: none; }
+  .composicion { font-size: 0.75rem; }
+  .composicion span { display: none; }
+  .pie-botones .btn.grande { min-width: 0; padding: 8px 16px; }
+  .pie-botones .btn { padding: 7px 10px; font-size: 0.75rem; }
+  .armado-cab h2 { font-size: 1rem; }
+}
+@media (max-height: 520px) and (orientation: landscape) {
+  #selector-presupuesto { flex-wrap: wrap; }
+  #selector-presupuesto .btn { flex: 1 1 45%; }
+}
+html.tactil .grupo-comandos:not(.solo-tactil):not(.solo-mover) .btn.comando b { display: none; }
+/* Centrado "seguro": si el contenido no entra, se alinea arriba y se puede
+   desplazar (sin esto, en el celular vertical se cortaba el principio). */
+.pantalla.visible { justify-content: safe center; }
+
+/* Armado de flota en teléfono vertical: una sola página que se desplaza,
+   con el pie (puntos y "Al combate") fijo abajo. */
+@media (max-width: 600px) and (orientation: portrait) {
+  .pantalla-armado.visible { display: flex; flex-direction: column; height: auto; min-height: 100vh; overflow-y: auto; padding: 46px 10px 0; gap: 8px; justify-content: flex-start; }
+  .armado-cab { grid-template-columns: auto 1fr; gap: 8px; }
+  .armado-cab h2 { font-size: 1rem; letter-spacing: 0.15em; text-align: right; }
+  .faccion-chip { grid-column: 1 / -1; justify-self: start; font-size: 0.75rem; }
+  .armado-cuerpo { display: flex; flex-direction: column; overflow: visible; }
+  .armado-cuerpo > .panel { overflow: visible; }
+  .tipo-fila { grid-template-columns: minmax(0, 1fr) auto; padding: 8px 2px; }
+  .tipo-fila h4 small { display: block; margin: 0; }
+  .tipo-fila .stats { gap: 6px; font-size: 0.72rem; }
+  .contador { flex-wrap: wrap; justify-content: flex-end; max-width: 130px; }
+  .contador .costo { width: 100%; text-align: center; }
+  .armado-pie { position: sticky; bottom: 0; grid-template-columns: 1fr; gap: 6px; padding: 8px 10px; margin: 0 -10px; width: auto; z-index: 2; }
+  .composicion span { display: none; }
+  .pie-botones { justify-content: stretch; }
+  .pie-botones .btn { flex: 1; }
+  .pie-botones .btn.grande { min-width: 0; }
+  .estado-rival { display: none; }
+}
+@media (max-width: 600px) and (orientation: portrait) {
+  .armado-cuerpo, .armado-cuerpo > .panel { height: auto; max-height: none; flex: none; min-height: 0; }
+  .lista-tipos .tipo-fila { flex: none; }
+}

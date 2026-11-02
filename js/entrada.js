@@ -5,6 +5,7 @@
 import * as THREE from 'three'
 import { JUGADOR } from './sim/batalla.js'
 import { TACTICAS } from './datos.js'
+import { ES_TACTIL } from './tactil.js'
 
 const ORDEN_TACTICAS = Object.keys(TACTICAS)
 const _v = new THREE.Vector3()
@@ -31,11 +32,20 @@ export class Entrada {
     this.ultimoClic = { t: 0, b: null }
     this.activa = true
 
+    // Los toques los maneja tactil.js; acá solo mouse y touchpad.
+    const sinToques = (fn) => (e) => {
+      if (e.pointerType === 'touch') return
+      fn(conCoordenadas(e, elemento))
+    }
     this.manejadores = {
-      pointerdown: (e) => this.alApretar(conCoordenadas(e, elemento)),
-      pointermove: (e) => this.alMover(conCoordenadas(e, elemento)),
-      pointerup: (e) => this.alSoltar(conCoordenadas(e, elemento)),
-      contextmenu: (e) => this.alClicSecundario(conCoordenadas(e, elemento)),
+      pointerdown: sinToques((e) => this.alApretar(e)),
+      pointermove: sinToques((e) => this.alMover(e)),
+      pointerup: sinToques((e) => this.alSoltar(e)),
+      contextmenu: (e) => {
+        // Mantener apretado en una pantalla táctil también dispara contextmenu.
+        if (performance.now() - (window.__ultimoToque ?? -1e9) < 1500) return e.preventDefault()
+        this.alClicSecundario(conCoordenadas(e, elemento))
+      },
     }
     for (const [k, f] of Object.entries(this.manejadores)) elemento.addEventListener(k, f)
     this.teclaAbajo = (e) => this.alTecla(e)
@@ -226,8 +236,9 @@ export class Entrada {
     const c = this.centroSeleccion()
     if (!c) return
     this.modo = 'mover'
+    document.body.classList.add('modo-mover')
     this.movimiento = { centro: c, punto: c.clone(), altura: c.y, ajustandoAltura: false, yBase: 0 }
-    this.alAviso('Mover · clic para confirmar · Shift para cambiar la altura · Esc cancela')
+    this.alAviso(ES_TACTIL ? 'Mover · tocá el destino · ▲ ▼ cambian la altura' : 'Mover · clic para confirmar · Shift para cambiar la altura · Esc cancela')
     this.actualizarMovimiento({ offsetX: this.cursor.x, offsetY: this.cursor.y, shiftKey: false })
   }
 
@@ -259,6 +270,7 @@ export class Entrada {
 
   cancelarModo() {
     this.modo = 'normal'
+    document.body.classList.remove('modo-mover')
     this.movimiento = null
     this.alAviso(null)
   }
@@ -324,7 +336,7 @@ export class Entrada {
         if (sel.length) {
           this.modo = 'atacar'
           this.movimiento = null
-          this.alAviso('Atacar · clic en un enemigo · Esc cancela')
+          this.alAviso(ES_TACTIL ? 'Atacar · tocá un enemigo' : 'Atacar · clic en un enemigo · Esc cancela')
         }
         break
       case 's':
@@ -360,7 +372,7 @@ export class Entrada {
     if (cmd === 'mover' && sel.length) this.iniciarMovimiento()
     if (cmd === 'atacar' && sel.length) {
       this.modo = 'atacar'
-      this.alAviso('Atacar · clic en un enemigo · Esc cancela')
+      this.alAviso(ES_TACTIL ? 'Atacar · tocá un enemigo' : 'Atacar · clic en un enemigo · Esc cancela')
     }
     if (cmd === 'detener') this.batalla.ordenarDetener(sel)
     if (cmd === 'enfocar') this.enfocar(true)

@@ -19,16 +19,19 @@ import { SincroAnfitrion, BatallaRemota, describirBatalla } from './red/partida.
 import { Terreno3D } from './motor/terreno3d.js'
 import { Tutorial, tutorialVisto } from './ui/tutorial.js'
 import { Entrada } from './entrada.js'
+import { Tactil, ES_TACTIL } from './tactil.js'
 import { Hud } from './ui/hud.js'
 import { Menus, mostrarPantalla } from './ui/menus.js'
 import { FACCIONES, TIPOS, ORDEN_TIPOS, DIFICULTADES } from './datos.js'
 
 const contenedor = document.getElementById('juego')
+// En celulares y tablets se arranca en calidad liviana (se puede cambiar).
+if (ES_TACTIL) document.documentElement.classList.add('tactil')
 const calidadInicial = (() => {
   try {
-    return localStorage.getItem('calidad') ?? 'alta'
+    return localStorage.getItem('calidad') ?? (ES_TACTIL ? 'baja' : 'alta')
   } catch {
-    return 'alta'
+    return ES_TACTIL ? 'baja' : 'alta'
   }
 })()
 const { renderer, escena, camara, fondo } = crearEscena(contenedor, calidadInicial)
@@ -136,6 +139,11 @@ document.body.addEventListener('click', (e) => {
   if (a === 'pausa' && partida) abrirAyuda(true)
   if (a === 'sensores' && partida) alternarSensores()
   if (a === 'pausa-tactica' && partida) alternarPausaTactica()
+  if (a === 'ver-flota') document.body.classList.toggle('ver-flota')
+  if (a === 'pantalla-completa') {
+    if (document.fullscreenElement) document.exitFullscreen?.()
+    else document.documentElement.requestFullscreen?.().catch(() => {})
+  }
   if (a === 'velocidad' && partida) alternarVelocidad()
   if (a === 'panel-sonido') alternarPanelSonido(e.target.closest('[data-accion]'))
   else if (!e.target.closest('#panel-sonido')) cerrarPanelSonido()
@@ -149,7 +157,12 @@ window.addEventListener('keydown', (e) => {
 document.getElementById('hud-comandos').addEventListener('click', (e) => {
   const b = e.target.closest('.btn')
   if (!b || !partida) return
-  partida.entrada.comando({ cmd: b.dataset.cmd, formacion: b.dataset.formacion, tactica: b.dataset.tactica })
+  const en = partida.entrada
+  // Botones extra de la pantalla táctil.
+  if (b.dataset.cmd === 'todos') return en.seleccionar(partida.batalla.batallones.filter((x) => x.equipo === JUGADOR))
+  if (b.dataset.cmd === 'ninguno') return en.seleccionar([])
+  if (b.dataset.cmd === 'subir' || b.dataset.cmd === 'bajar') return partida.tactil.cambiarAltura(b.dataset.cmd === 'subir' ? 1 : -1)
+  en.comando({ cmd: b.dataset.cmd, formacion: b.dataset.formacion, tactica: b.dataset.tactica })
 })
 
 // --- Panel de sonido ---------------------------------------------------------
@@ -332,8 +345,10 @@ function iniciarBatalla(config, opciones = {}) {
     alOrden: (evento) => partida?.tutorial?.notificar(evento),
   })
   hud = new Hud({ batalla, entrada, faccion: config.faccion, orbital })
+  const tactil = new Tactil({ elemento: renderer.domElement, entrada, orbital })
+  document.body.classList.add('en-batalla')
   partida = {
-    batalla, ia, entrada, hud, config, terreno3d,
+    batalla, ia, entrada, hud, config, terreno3d, tactil,
     fin: 0,
     pausaTactica: false,
     velocidad: 1,
@@ -386,6 +401,8 @@ function terminarBatalla() {
   if (!partida) return
   for (const n of partida.batalla.naves) if (n.malla) escena.remove(n.malla)
   partida.entrada.destruir()
+  partida.tactil.destruir()
+  document.body.classList.remove('en-batalla', 'ver-flota', 'modo-mover')
   partida.terreno3d.destruir()
   partida.tutorial?.destruir()
   sonido.ambiente(false)

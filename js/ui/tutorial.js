@@ -2,6 +2,8 @@
 // cuando el jugador hace lo que se pide (o con "Siguiente"). El enemigo
 // espera quieto hasta el paso de atacar.
 
+import { ES_TACTIL } from '../tactil.js'
+
 const $ = (s) => document.querySelector(s)
 
 const PASOS = [
@@ -13,37 +15,45 @@ const PASOS = [
   {
     titulo: 'Mover la cámara',
     texto: 'Deslizá <b>con dos dedos</b> en el touchpad para girar alrededor de la flota y <b>pellizcá</b> para acercarte o alejarte.',
+    textoTactil: '<b>Arrastrá con un dedo</b> para girar alrededor de la flota y <b>pellizcá</b> con dos dedos para acercarte o alejarte.',
     hecho: (t) => t.giro > 0.6 && t.zoom > 0.25,
   },
   {
     titulo: 'Elegir batallones',
     texto: '<b>Tocá</b> una nave para seleccionar su batallón, o <b>mantené apretado y arrastrá</b> para encerrar varios en un recuadro.',
+    textoTactil: '<b>Tocá</b> una nave tuya para seleccionar su batallón. <b>Doble toque</b> elige todos los de ese tipo y <b>mantener apretado</b> suma otro batallón.',
     hecho: (t) => t.eventos.has('seleccion'),
   },
   {
     titulo: 'Dar órdenes',
     texto: 'Con algo seleccionado, hacé <b>clic con dos dedos</b> en el espacio vacío: tus naves van ahí.',
+    textoTactil: 'Con algo seleccionado, <b>tocá el espacio vacío</b>: tus naves van ahí.',
     hecho: (t) => t.eventos.has('mover'),
   },
   {
     titulo: 'Moverse en 3D',
     texto: 'Apretá <b>M</b>: aparece el disco de movimiento. Elegí el lugar con el cursor, mantené <b>Shift</b> para subir o bajar y hacé <b>clic</b> para confirmar.',
+    textoTactil: 'Tocá el botón <b>Mover</b>: aparece el disco. Con <b>▲ ▼</b> subís o bajás, y después <b>tocá el destino</b>.',
     hecho: (t) => t.eventos.has('mover3d'),
   },
   {
     titulo: 'Atacar',
     texto: 'Hacé <b>clic con dos dedos sobre una nave enemiga</b> (las rojas) para atacarla. A partir de ahora el enemigo también se mueve.',
+    textoTactil: 'Con algo seleccionado, <b>tocá una nave enemiga</b> (las rojas) para atacarla. A partir de ahora el enemigo también se mueve.',
     alEntrar: (t) => t.soltarIA(),
     hecho: (t) => t.eventos.has('atacar'),
   },
   {
     titulo: 'El tiempo es tuyo',
     texto: '<b>P</b> congela la batalla y te deja seguir dando órdenes (pausa táctica). <b>R</b> alterna la velocidad ×2. Tocá el <b>minimapa</b> para llevar la cámara a otro lugar.',
+    textoTactil: 'El botón <b>❚❚ Pausa</b> congela la batalla y te deja seguir dando órdenes. <b>×1</b> alterna la velocidad ×2. Tocá el <b>minimapa</b> para llevar la cámara a otro lugar.',
     hecho: (t) => t.eventos.has('pausaTactica'),
   },
   {
     titulo: 'Contras y terreno',
     texto: 'Corbeta › Caza › Bombardero › Crucero y Acorazado; el Crucero barre Corbetas y Cazas. Los asteroides frenan los disparos (los chicos se rompen) y las nebulosas esconden naves. Tus naves chicas dañadas se reparan cerca de tus capitales. <b>Esc</b> muestra todos los controles.',
+    textoTactil:
+      'Corbeta › Caza › Bombardero › Crucero y Acorazado; el Crucero barre Corbetas y Cazas. Los asteroides frenan los disparos (los chicos se rompen) y las nebulosas esconden naves. Tus naves chicas dañadas se reparan cerca de tus capitales. El botón <b>Menú</b> muestra todos los controles.',
     boton: 'A la batalla',
   },
 ]
@@ -94,7 +104,7 @@ export class Tutorial {
     this.panel.innerHTML = `
       <div class="tutorial-paso">Paso ${this.i + 1} de ${PASOS.length}</div>
       <h3>${p.titulo}</h3>
-      <p>${p.texto}</p>
+      <p>${(ES_TACTIL && p.textoTactil) || p.texto}</p>
       <div class="tutorial-botones">
         <button class="btn ${p.boton ? 'grande' : 'chico'}" data-tutorial="siguiente">${p.boton ?? 'Siguiente'}</button>
         ${this.i < PASOS.length - 1 ? '<button class="btn chico" data-tutorial="saltar">Saltar tutorial</button>' : ''}

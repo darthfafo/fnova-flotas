@@ -141,7 +141,7 @@ export class Hud {
     const t = sel[0]?.tactica
     for (const b of document.querySelectorAll('[data-formacion]')) b.classList.toggle('activo', b.dataset.formacion === f)
     for (const b of document.querySelectorAll('[data-tactica]')) b.classList.toggle('activo', b.dataset.tactica === t)
-    for (const b of document.querySelectorAll('#hud-comandos .btn')) b.disabled = !sel.length
+    for (const b of document.querySelectorAll('#hud-comandos .btn')) b.disabled = !sel.length && b.dataset.cmd !== 'todos'
     this.actualizarDom()
   }
 
