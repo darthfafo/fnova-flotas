@@ -286,6 +286,10 @@ export class Batalla {
     }
   }
 
+  cambiarTactica(batallones, tactica) {
+    for (const b of batallones) b.tactica = tactica
+  }
+
   cambiarFormacion(batallones, formacion) {
     for (const b of batallones) b.formacion = formacion
     if (batallones.every((b) => b.orden.tipo !== 'atacar')) {
@@ -632,7 +636,7 @@ export class Batalla {
       teledirigido: arma.tipo === 'torpedo',
       tipo: arma.tipo,
     })
-    this.eventos.push({ tipo: 'disparo', pos: origen, arma: arma.tipo, equipo: n.equipo })
+    this.eventos.push({ tipo: 'disparo', pos: origen, arma: arma.tipo, equipo: n.equipo, autor: n, objetivo: obj, impacta })
   }
 
   moverProyectiles(dt) {

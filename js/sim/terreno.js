@@ -20,6 +20,10 @@ const _b = new THREE.Vector3()
 export class Terreno {
   constructor(tipo, ancho = 1, s = Math.floor(Math.random() * 1e9)) {
     this.tipo = tipo
+    // Con el tipo, el ancho y la semilla se reconstruye el mismo mapa en otra
+    // computadora (multijugador).
+    this.ancho = ancho
+    this.semilla = s
     this.asteroides = [] // { pos, radio, giro, eje }
     this.nebulosas = [] // { pos, radio, color }
     const azar = semilla(s)
@@ -56,6 +60,9 @@ export class Terreno {
     // No pisar a otro asteroide.
     for (const a of this.asteroides) if (a.pos.distanceTo(pos) < a.radio + radio + 10) return
     this.asteroides.push({
+      // Identificador estable (el índice cambia cuando una roca se rompe):
+      // anfitrión e invitado generan las mismas rocas con la misma semilla.
+      id: (this.siguienteId = (this.siguienteId ?? 0) + 1),
       pos,
       radio,
       // Las rocas chicas aguantan una cantidad de daño y se rompen; las

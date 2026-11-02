@@ -38,11 +38,13 @@ export class Menus {
       else if (a === 'tutorial') alTutorial()
       else if (a === 'controles') alAbrirAyuda(false)
       else if (a === 'volver-titulo' || a === 'menu') mostrarPantalla('pantalla-titulo')
+      else if (a === 'volver-faccion' && this.modo === 'multi') this.alSalirMulti?.()
       else if (a === 'volver-faccion') this.faccionFija() ? mostrarPantalla('pantalla-titulo') : mostrarPantalla('pantalla-faccion')
       else if (a === 'cambiar-flota') mostrarPantalla('pantalla-flota')
       else if (a === 'sugerida') {
         this.sugerida()
-      } else if (a === 'combatir' || a === 'revancha') this.alCombatir(this.config)
+      } else if (a === 'combatir' && this.modo === 'multi') this.alListo?.(this.config)
+      else if (a === 'combatir' || a === 'revancha') this.alCombatir(this.config)
     })
   }
 
@@ -250,7 +252,7 @@ export class Menus {
     const fa = FACCIONES[this.config.faccion]
     $('#armado-faccion').innerHTML = `<i style="background:${fa.acentoCss}"></i>${fa.nombre}`
     $('#armado-faccion').title = `${fa.rasgo.nombre}: ${fa.rasgo.efectos.join(' · ')}`
-    $('[data-accion="volver-faccion"]').textContent = this.faccionFija() ? '‹ Inicio' : '‹ Facción'
+    $('[data-accion="volver-faccion"]').textContent = this.modo === 'multi' ? '‹ Salir de la sala' : this.faccionFija() ? '‹ Inicio' : '‹ Facción'
     $('#presupuesto-barra').style.width = `${(u / total) * 100}%`
     for (const b of document.querySelectorAll('[data-pres]')) b.classList.toggle('activo', Number(b.dataset.pres) === total)
     for (const b of document.querySelectorAll('[data-dif]')) b.classList.toggle('activo', b.dataset.dif === this.config.dificultad)
@@ -271,7 +273,12 @@ export class Menus {
     const m = Math.floor(informe.segundos / 60)
     const s = String(Math.floor(informe.segundos % 60)).padStart(2, '0')
     const tamaño = PRESUPUESTOS.find((p) => p.valor === c.presupuesto)?.nombre ?? 'Batalla'
-    $('#fin-meta').innerHTML = [mapa, `${tamaño} · ${n(c.presupuesto)} pts`, DIFICULTADES[c.dificultad].nombre, `${m}:${s}`]
+    // En red no hay dificultad, y "otra batalla" vuelve a la sala de espera.
+    const revancha = document.querySelector('#pantalla-fin [data-accion="revancha"], #pantalla-fin [data-accion="multijugador"]')
+    revancha.dataset.accion = c.enRed ? 'multijugador' : 'revancha'
+    revancha.textContent = c.enRed ? 'Otra batalla en red' : 'Revancha'
+    $('#pantalla-fin [data-accion="cambiar-flota"]').hidden = !!c.enRed
+    $('#fin-meta').innerHTML = [mapa, `${tamaño} · ${n(c.presupuesto)} pts`, c.enRed ? 'Multijugador' : DIFICULTADES[c.dificultad].nombre, `${m}:${s}`]
       .map((x) => `<span>${x}</span>`)
       .join('')
 

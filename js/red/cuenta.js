@@ -6,9 +6,13 @@
 const URL_SUPABASE = 'https://pyqmcbnmzgitibkkpqmq.supabase.co'
 const CLAVE_PUBLICA = 'sb_publishable__4HVrjg8bxpFdEK0UCEjLQ_7RtbjoOm'
 const BIBLIOTECA = 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.117.3/+esm'
+// Captcha de Cloudflare Turnstile para registrarse e ingresar. Con null no se
+// pide captcha. La clave del sitio es pública; la secreta va solo en Supabase
+// (Authentication → Attack Protection).
+export const CAPTCHA_TURNSTILE = null
 
 let cliente = null
-async function supabase() {
+export async function supabase() {
   if (!cliente) {
     const { createClient } = await import(BIBLIOTECA)
     cliente = createClient(URL_SUPABASE, CLAVE_PUBLICA, { auth: { persistSession: true, autoRefreshToken: true } })
@@ -28,6 +32,7 @@ function traducir(error) {
   if (/Demasiados resultados/i.test(m)) return 'Demasiados resultados seguidos, esperá unos segundos.'
   if (/rate limit|too many/i.test(m)) return 'Demasiados intentos. Probá de nuevo en un rato.'
   if (/Failed to fetch|NetworkError|Load failed/i.test(m)) return 'No hay conexión con el servidor.'
+  if (/captcha/i.test(m)) return 'Falta completar la verificación de seguridad.'
   return m
 }
 
@@ -69,13 +74,13 @@ export class Cuenta {
     this.perfil = data ?? null
   }
 
-  async registrar({ nombre, email, contraseña, faccion }) {
+  async registrar({ nombre, email, contraseña, faccion, captchaToken }) {
     nombre = nombre.trim()
     if (nombre.length < 3 || nombre.length > 20) throw new Error('El nombre debe tener entre 3 y 20 caracteres.')
     const sb = await supabase()
     const { data: tomado } = await sb.from('perfiles').select('id').ilike('nombre', nombre).maybeSingle()
     if (tomado) throw new Error('Ese nombre de comandante ya está tomado.')
-    const { data, error } = await sb.auth.signUp({ email: email.trim(), password: contraseña })
+    const { data, error } = await sb.auth.signUp({ email: email.trim(), password: contraseña, options: { captchaToken } })
     if (error) throw new Error(traducir(error))
     if (!data.session) throw new Error('La cuenta se creó pero hay que confirmarla por email. Revisá tu correo.')
     this.usuario = data.user
@@ -85,9 +90,9 @@ export class Cuenta {
     this.avisar()
   }
 
-  async ingresar({ email, contraseña }) {
+  async ingresar({ email, contraseña, captchaToken }) {
     const sb = await supabase()
-    const { data, error } = await sb.auth.signInWithPassword({ email: email.trim(), password: contraseña })
+    const { data, error } = await sb.auth.signInWithPassword({ email: email.trim(), password: contraseña, options: { captchaToken } })
     if (error) throw new Error(traducir(error))
     this.usuario = data.user
     await this.cargarPerfil()

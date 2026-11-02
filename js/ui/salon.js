@@ -4,6 +4,7 @@
 import { FACCIONES, DIFICULTADES, PRESUPUESTOS } from '../datos.js'
 import { MAPAS } from '../sim/terreno.js'
 import { mostrarPantalla, bloqueRasgo } from './menus.js'
+import { CAPTCHA_TURNSTILE } from '../red/cuenta.js'
 
 const $ = (s) => document.querySelector(s)
 const n = (x) => Math.round(x).toLocaleString('es-AR')
@@ -108,10 +109,36 @@ export class Salon {
         <p class="nota">Tu facción define tus naves y su rasgo en batalla. Con <b>Partida rápida</b> podés probar la otra cuando quieras.</p>` : ''}
         ${soloPerfil ? '' : `<label>Email<input name="email" type="email" required autocomplete="email" /></label>
         <label>Contraseña<input name="contraseña" type="password" minlength="6" required autocomplete="${crear ? 'new-password' : 'current-password'}" placeholder="${crear ? 'Al menos 6 caracteres' : ''}" /></label>`}
+        ${CAPTCHA_TURNSTILE && !soloPerfil ? '<div class="captcha" id="captcha"></div>' : ''}
         <div class="error-cuenta" id="error-cuenta"></div>
         <button class="btn grande" type="submit">${soloPerfil ? 'Guardar' : crear ? 'Crear comandante' : 'Ingresar'}</button>
       </form>
       ${this.pendiente ? '<p class="nota">Al ingresar se guarda también el resultado de la batalla que acabás de jugar.</p>' : ''}`
+    if (CAPTCHA_TURNSTILE && !soloPerfil) this.montarCaptcha()
+  }
+
+  // Verificación de Cloudflare Turnstile (casi siempre invisible). El token
+  // sirve una sola vez: se renueva después de cada intento.
+  async montarCaptcha() {
+    this.tokenCaptcha = null
+    if (!window.turnstile) {
+      await new Promise((ok, mal) => {
+        const s = document.createElement('script')
+        s.src = 'https://challenges.cloudflare.com/turnstile/v0/api.js?render=explicit'
+        s.onload = ok
+        s.onerror = mal
+        document.head.appendChild(s)
+      }).catch(() => null)
+    }
+    const el = $('#captcha')
+    if (!window.turnstile || !el) return
+    this.widgetCaptcha = window.turnstile.render(el, {
+      sitekey: CAPTCHA_TURNSTILE,
+      theme: 'dark',
+      language: 'es',
+      callback: (t) => (this.tokenCaptcha = t),
+      'expired-callback': () => (this.tokenCaptcha = null),
+    })
   }
 
   // Al elegir facción en el formulario se muestra su rasgo de batalla.
@@ -124,6 +151,13 @@ export class Salon {
 
   async enviarFormulario(form) {
     const datos = Object.fromEntries(new FormData(form))
+    if (CAPTCHA_TURNSTILE && this.modo !== 'perfil') {
+      if (!this.tokenCaptcha) {
+        $('#error-cuenta').textContent = 'Esperá a que termine la verificación de seguridad.'
+        return
+      }
+      datos.captchaToken = this.tokenCaptcha
+    }
     const boton = form.querySelector('button[type=submit]')
     const error = $('#error-cuenta')
     error.textContent = ''
@@ -143,6 +177,12 @@ export class Salon {
       error.textContent = e.message
     } finally {
       boton.disabled = false
+      if (CAPTCHA_TURNSTILE && window.turnstile && this.widgetCaptcha !== undefined) {
+        try {
+          window.turnstile.reset(this.widgetCaptcha)
+        } catch {}
+        this.tokenCaptcha = null
+      }
     }
   }
 

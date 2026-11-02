@@ -106,6 +106,7 @@
       </div>
       <div class="composicion" id="composicion"></div>
       <div class="pie-botones">
+        <span class="estado-rival" id="estado-rival"></span>
         <button class="btn" data-accion="sugerida">Flota sugerida</button>
         <button class="btn grande" data-accion="combatir" id="btn-combatir">Al combate</button>
       </div>
@@ -192,6 +193,32 @@
     <div class="panel ventana-cuenta">
       <button class="btn chico cerrar" data-accion="cerrar-cuenta">✕</button>
       <div id="cuenta-contenido"></div>
+    </div>
+  </section>
+
+  <section id="pantalla-multi" class="pantalla">
+    <div class="salon">
+      <header class="armado-cab">
+        <button class="btn chico" data-accion="salir-multi">‹ Volver</button>
+        <h2>Multijugador</h2>
+        <div></div>
+      </header>
+      <p class="salon-sub">Batallas uno contra uno contra otros comandantes, en tiempo real.</p>
+      <div class="multi-cuerpo">
+        <div class="panel multi-salas">
+          <div class="fila-titulo">Batallas esperando rival</div>
+          <div id="multi-lista"></div>
+        </div>
+        <div class="panel multi-crear" id="multi-crear">
+          <div class="fila-titulo">Crear batalla</div>
+          <div class="selector" id="multi-tamaño"></div>
+          <div class="fila-titulo">Mapa</div>
+          <div class="selector mapas" id="multi-mapa"></div>
+          <button class="btn grande" data-accion="crear-sala">Crear y esperar rival</button>
+          <p class="nota">Juegan con la facción de su comandante. Cada uno arma su flota con el mismo presupuesto y la batalla empieza cuando los dos tocan <b>Listo</b>.</p>
+        </div>
+      </div>
+      <div class="multi-estado" id="multi-estado"></div>
     </div>
   </section>
 

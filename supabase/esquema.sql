@@ -114,3 +114,54 @@ where r.resultado = 'victoria'
 order by r.dificultad, r.jugador, r.puntaje desc, r.creado;
 
 grant select on public.ranking to anon, authenticated;
+
+-- ---------------------------------------------------------------------------
+-- Multijugador: salas de espera.
+-- Una sala la crea el anfitrión; otro comandante se une con unirse_a_sala().
+-- La partida en sí viaja por un canal de Supabase Realtime ("sala-<id>"):
+-- la base solo guarda quién espera, quién se unió y en qué estado está.
+create table if not exists public.salas (
+  id uuid primary key default gen_random_uuid(),
+  anfitrion uuid not null default auth.uid() references public.perfiles (id) on delete cascade,
+  invitado uuid references public.perfiles (id) on delete set null,
+  presupuesto int not null check (presupuesto between 1500 and 20000),
+  mapa text not null check (mapa in ('abierto', 'asteroides', 'nebulosa', 'mixto', 'azar')),
+  estado text not null default 'esperando' check (estado in ('esperando', 'armando', 'jugando', 'terminada')),
+  creado timestamptz not null default now()
+);
+create index if not exists salas_abiertas on public.salas (estado, creado desc);
+
+alter table public.salas enable row level security;
+drop policy if exists "salas visibles" on public.salas;
+create policy "salas visibles" on public.salas for select to authenticated using (true);
+drop policy if exists "crear mi sala" on public.salas;
+create policy "crear mi sala" on public.salas for insert to authenticated with check ((select auth.uid()) = anfitrion);
+drop policy if exists "el anfitrion actualiza su sala" on public.salas;
+create policy "el anfitrion actualiza su sala" on public.salas for update to authenticated
+  using ((select auth.uid()) = anfitrion) with check ((select auth.uid()) = anfitrion);
+drop policy if exists "el anfitrion borra su sala" on public.salas;
+create policy "el anfitrion borra su sala" on public.salas for delete to authenticated using ((select auth.uid()) = anfitrion);
+
+grant select, delete on public.salas to authenticated;
+grant insert (presupuesto, mapa), update (estado) on public.salas to authenticated;
+
+-- Un solo comandante por sala, sin carreras: el primero que llama se queda
+-- con el lugar.
+create or replace function public.unirse_a_sala(p_sala uuid) returns public.salas
+language plpgsql security definer set search_path = public as $$
+declare
+  s public.salas;
+begin
+  update public.salas
+    set invitado = auth.uid(), estado = 'armando'
+    where id = p_sala and invitado is null and estado = 'esperando'
+      and anfitrion <> auth.uid() and creado > now() - interval '30 minutes'
+    returning * into s;
+  if s.id is null then
+    raise exception 'La sala ya no está disponible.';
+  end if;
+  return s;
+end;
+$$;
+revoke execute on function public.unirse_a_sala(uuid) from public, anon;
+grant execute on function public.unirse_a_sala(uuid) to authenticated;

@@ -611,3 +611,20 @@ body:has(#pantalla-titulo.visible) .btn-cuenta:not([hidden]) { display: flex; }
 .tarjeta-faccion p { margin: 6px 0; font-size: 0.92rem; }
 .nota-faccion .rasgo { margin-top: 0; border-top: 0; padding-top: 0; }
 .ventana-cuenta { max-height: 94vh; overflow-y: auto; }
+.captcha { min-height: 66px; display: flex; justify-content: center; }
+
+/* --- Multijugador -------------------------------------------------------- */
+.multi-cuerpo { display: grid; grid-template-columns: minmax(0, 1fr) 300px; gap: 12px; }
+.multi-salas, .multi-crear { padding: 12px 14px; }
+.multi-crear { display: flex; flex-direction: column; gap: 6px; }
+.multi-crear .btn.grande { margin-top: 8px; }
+.fila-sala { display: grid; grid-template-columns: 1fr auto auto auto; gap: 14px; align-items: center; padding: 8px 4px; border-top: 1px solid rgba(150, 195, 230, 0.1); }
+.fila-sala small { color: var(--texto-tenue); margin-left: 6px; }
+.multi-estado { display: flex; justify-content: center; min-height: 2em; }
+.esperando { display: flex; gap: 14px; align-items: center; color: var(--texto-tenue); }
+.esperando .latido { color: #f2c27e; font-weight: 700; letter-spacing: 0.15em; text-transform: uppercase; animation: latido 1.6s infinite; }
+.estado-rival { align-self: center; color: var(--texto-tenue); margin-right: 6px; font-size: 0.9rem; }
+.estado-rival b { color: var(--propio); }
+.modo-multi .ajustes { display: none; }
+.modo-multi .armado-cuerpo { grid-template-columns: 1fr; }
+@media (max-width: 820px) { .multi-cuerpo { grid-template-columns: 1fr; } }

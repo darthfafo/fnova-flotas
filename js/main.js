@@ -14,6 +14,8 @@ import { Terreno, MAPAS } from './sim/terreno.js'
 import { armarInforme } from './sim/informe.js'
 import { Cuenta } from './red/cuenta.js'
 import { Salon } from './ui/salon.js'
+import { Multijugador } from './ui/multijugador.js'
+import { SincroAnfitrion, BatallaRemota, describirBatalla } from './red/partida.js'
 import { Terreno3D } from './motor/terreno3d.js'
 import { Tutorial, tutorialVisto } from './ui/tutorial.js'
 import { Entrada } from './entrada.js'
@@ -74,6 +76,17 @@ const menus = new Menus({
     ),
 })
 
+const multijugador = new Multijugador({
+  menus,
+  cuenta,
+  salon,
+  alIniciar: (rol, canal, datos) =>
+    rol === 'anfitrion'
+      ? iniciarBatalla(datos.config, { red: { rol, canal, flotaRival: datos.flotaRival, faccionRival: datos.faccionRival, nombreRival: datos.nombreRival } })
+      : iniciarBatalla(datos.config, { red: { rol, canal, descripcion: datos.descripcion } }),
+})
+menus.alSalirMulti = () => multijugador.salir(true)
+
 const intro = new Intro({
   musica,
   alComenzar: () => {
@@ -112,6 +125,11 @@ document.body.addEventListener('click', (e) => {
   if (a === 'cerrar-ayuda') cerrarAyuda()
   if (a === 'abandonar') {
     cerrarAyuda()
+    if (partida?.red) {
+      // Abandonar una batalla en red es rendirse.
+      partida.red.canal.enviar('rendicion', {})
+      multijugador.terminar()
+    }
     terminarBatalla()
     mostrarPantalla('pantalla-titulo')
   }
@@ -259,30 +277,46 @@ function iniciarBatalla(config, opciones = {}) {
   refrescarPanelSonido()
   document.getElementById('btn-sonido-menu').hidden = true
   document.getElementById('btn-cuenta').hidden = true
-  const faccionEnemiga = config.faccion === 'guardianes' ? 'inquisidores' : 'guardianes'
-  const flotaRival = flotaEnemiga(config.dificultad, config.presupuesto)
-  const tipoMapa = config.mapa in MAPAS ? config.mapa : Object.keys(MAPAS)[Math.floor(Math.random() * 4)]
-  // El terreno se estira con el tamaño de las flotas.
-  const batallonesMax = Math.max(...[config.flota, flotaRival].map((f) => Object.values(f).reduce((a, b) => a + b, 0)))
-  const terreno = new Terreno(tipoMapa, THREE.MathUtils.clamp(batallonesMax / 14, 1, 1.8))
-  const batalla = new Batalla({
-    faccionJugador: config.faccion,
-    faccionEnemiga,
-    plantilla,
-    crearMalla: crearMallaNave,
-    terreno,
-  })
+  // Multijugador: el anfitrión simula; el invitado reconstruye la batalla
+  // que le describe el anfitrión y solo la reproduce (ver red/partida.js).
+  const red = opciones.red
+  const invitado = red?.rol === 'invitado'
+  let batalla, terreno, faccionEnemiga, flotaRival
+  if (invitado) {
+    batalla = new BatallaRemota({ descripcion: red.descripcion, plantilla, crearMalla: crearMallaNave, canal: red.canal })
+    terreno = batalla.terreno
+    faccionEnemiga = batalla.facciones[ENEMIGO]
+  } else {
+    faccionEnemiga = red ? red.faccionRival : config.faccion === 'guardianes' ? 'inquisidores' : 'guardianes'
+    flotaRival = red ? red.flotaRival : flotaEnemiga(config.dificultad, config.presupuesto)
+    const tipoMapa = config.mapa in MAPAS ? config.mapa : Object.keys(MAPAS)[Math.floor(Math.random() * 4)]
+    // El terreno se estira con el tamaño de las flotas.
+    const batallonesMax = Math.max(...[config.flota, flotaRival].map((f) => Object.values(f).reduce((a, b) => a + b, 0)))
+    terreno = new Terreno(tipoMapa, THREE.MathUtils.clamp(batallonesMax / 14, 1, 1.8))
+    batalla = new Batalla({
+      faccionJugador: config.faccion,
+      faccionEnemiga,
+      plantilla,
+      crearMalla: crearMallaNave,
+      terreno,
+    })
+  }
   renderer.setPixelRatio(Math.min(window.devicePixelRatio, config.calidad === 'baja' ? 1 : 1.5))
   renderer.setSize(contenedor.clientWidth, contenedor.clientHeight)
   particulas.puntos.material.uniforms.escala.value = escalaPuntos()
   motores.puntos.material.uniforms.escala.value = escalaPuntos()
 
-  const propios = desplegar(batalla, JUGADOR, config.flota)
-  desplegar(batalla, ENEMIGO, flotaRival)
+  let propios
+  if (invitado) propios = batalla.batallones.filter((b) => b.equipo === JUGADOR)
+  else {
+    propios = desplegar(batalla, JUGADOR, config.flota)
+    desplegar(batalla, ENEMIGO, flotaRival)
+  }
   const terreno3d = new Terreno3D(escena, terreno)
   for (const n of batalla.naves) escena.add(n.malla)
 
-  const ia = new ComandanteIA(batalla, config.dificultad)
+  // En multijugador el otro bando lo maneja una persona, no la IA.
+  const ia = red ? { actualizar() {}, esperando: false } : new ComandanteIA(batalla, config.dificultad)
   let hud = null
   const entrada = new Entrada({
     elemento: renderer.domElement,
@@ -293,8 +327,8 @@ function iniciarBatalla(config, opciones = {}) {
     alAviso: (t, s) => hud?.aviso(t, s),
     alPausa: () => abrirAyuda(true),
     alSensores: () => alternarSensores(),
-    alPausaTactica: () => alternarPausaTactica(),
-    alVelocidad: () => alternarVelocidad(),
+    alPausaTactica: () => !red && alternarPausaTactica(),
+    alVelocidad: () => !red && alternarVelocidad(),
     alOrden: (evento) => partida?.tutorial?.notificar(evento),
   })
   hud = new Hud({ batalla, entrada, faccion: config.faccion, orbital })
@@ -306,8 +340,25 @@ function iniciarBatalla(config, opciones = {}) {
     fps: { t: 0, n: 0, ajustado: config.calidad === 'baja' },
   }
   pausa = false
-  if (opciones.tutorial || !tutorialVisto()) partida.tutorial = new Tutorial({ orbital, ia })
+  if (!red && (opciones.tutorial || !tutorialVisto())) partida.tutorial = new Tutorial({ orbital, ia })
   partida.esTutorial = !!opciones.tutorial
+  partida.red = red
+  // En red no hay pausa táctica ni velocidad ×2: el tiempo es el mismo para los dos.
+  document.getElementById('btn-pausa-tactica').hidden = !!red
+  document.getElementById('btn-velocidad').hidden = !!red
+  if (red) {
+    if (!invitado) {
+      red.canal.enviar('inicio', describirBatalla(batalla, config))
+      partida.sincro = new SincroAnfitrion(batalla, red.canal)
+    }
+    const ganarPor = (motivo) => {
+      if (partida?.red !== red || batalla.terminada) return
+      batalla.terminada = 'victoria'
+      hud.registrar(motivo, 'bueno')
+    }
+    red.canal.al('rendicion', () => ganarPor('Tu rival se rindió.'))
+    red.canal.alSalirRival(() => ganarPor('Tu rival se desconectó.'))
+  }
 
   // Cámara detrás de la flota propia, mirando hacia el enemigo.
   const centro = new THREE.Vector3()
@@ -323,8 +374,12 @@ function iniciarBatalla(config, opciones = {}) {
   entrada.seleccionar(propios)
 
   for (const p of document.querySelectorAll('.pantalla')) p.classList.remove('visible')
-  hud.registrar(`Flota ${FACCIONES[faccionEnemiga].nombre} detectada. A tus puestos, comandante.`)
-  hud.registrar(`Mapa: ${MAPAS[tipoMapa].nombre}`)
+  hud.registrar(
+    red
+      ? `Batalla contra ${red.nombreRival ?? 'tu rival'} (${FACCIONES[faccionEnemiga].nombre}). Que gane el mejor comandante.`
+      : `Flota ${FACCIONES[faccionEnemiga].nombre} detectada. A tus puestos, comandante.`,
+  )
+  hud.registrar(`Mapa: ${MAPAS[terreno.tipo].nombre}`)
 }
 
 function terminarBatalla() {
@@ -601,6 +656,10 @@ function cuadro() {
     const pasos = Math.ceil(dtJuego / PASO)
     for (let i = 0; i < pasos; i++) p.batalla.paso(dtJuego / pasos)
     p.ia.actualizar(dtJuego)
+    if (p.sincro) {
+      p.sincro.recolectar()
+      p.sincro.actualizar(dtJuego)
+    }
     procesarEventos(p.batalla)
     sincronizarNaves(p.batalla, dtJuego)
     particulas.actualizar(dtJuego)
@@ -624,10 +683,16 @@ function cuadro() {
         const tipoMapa = p.batalla.terreno.tipo
         const config = p.config
         const esTutorial = p.esTutorial
+        const enRed = !!p.red
         terminarBatalla()
-        menus.mostrarFin(informe, MAPAS[tipoMapa].nombre, config)
-        document.getElementById('fin-ranking').innerHTML = esTutorial ? '<span>Las batallas del tutorial no entran al Salón de la Fama.</span>' : ''
-        if (!esTutorial) salon.alTerminarBatalla({ informe, config, mapa: tipoMapa, faccion: config.faccion })
+        menus.mostrarFin(informe, MAPAS[tipoMapa].nombre, { ...config, enRed })
+        document.getElementById('fin-ranking').innerHTML = esTutorial
+          ? '<span>Las batallas del tutorial no entran al Salón de la Fama.</span>'
+          : enRed
+            ? '<span>Batalla multijugador: el ranking entre comandantes llega más adelante.</span>'
+            : ''
+        if (enRed) multijugador.terminar()
+        else if (!esTutorial) salon.alTerminarBatalla({ informe, config, mapa: tipoMapa, faccion: config.faccion })
       }
     }
   } else if (!p) {

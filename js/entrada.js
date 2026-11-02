@@ -369,7 +369,7 @@ export class Entrada {
       this.alAviso(`Formación ${formacion}`, 1)
     }
     if (tactica && sel.length) {
-      for (const b of sel) b.tactica = tactica
+      this.batalla.cambiarTactica(sel, tactica)
       this.alAviso(`Táctica ${TACTICAS[tactica].nombre}`, 1)
     }
     this.alCambiarSeleccion()
