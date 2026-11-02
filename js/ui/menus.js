@@ -1,5 +1,5 @@
 // Pantallas fuera de la batalla: título, facción, armado de flota y fin.
-import { FACCIONES, TIPOS, ORDEN_TIPOS, DIFICULTADES, PRESUPUESTO_BASE } from '../datos.js'
+import { FACCIONES, TIPOS, ORDEN_TIPOS, DIFICULTADES, PRESUPUESTO_BASE, PRESUPUESTOS, PRESUPUESTO_MIN, PRESUPUESTO_MAX } from '../datos.js'
 
 const $ = (s) => document.querySelector(s)
 
@@ -13,11 +13,13 @@ export class Menus {
       faccion: 'guardianes',
       dificultad: 'normal',
       calidad: guardado('calidad', 'alta'),
+      presupuesto: limitar(Number(guardado('presupuesto', PRESUPUESTO_BASE)) || PRESUPUESTO_BASE),
       flota: { caza: 3, corbeta: 2, bombardero: 2, crucero: 2, acorazado: 0 },
     }
     this.alCombatir = alCombatir
     this.armarFacciones()
     this.armarFlota()
+    this.sugerida()
 
     document.body.addEventListener('click', (e) => {
       const a = e.target.closest('[data-accion]')?.dataset.accion
@@ -27,8 +29,7 @@ export class Menus {
       else if (a === 'volver-titulo' || a === 'menu') mostrarPantalla('pantalla-titulo')
       else if (a === 'volver-faccion') mostrarPantalla('pantalla-faccion')
       else if (a === 'sugerida') {
-        this.config.flota = { caza: 3, corbeta: 2, bombardero: 2, crucero: 2, acorazado: 0 }
-        this.refrescarFlota()
+        this.sugerida()
       } else if (a === 'combatir' || a === 'revancha') this.alCombatir(this.config)
     })
   }
@@ -94,7 +95,7 @@ export class Menus {
     lista.addEventListener('click', (e) => {
       const mas = e.target.dataset.mas
       const menos = e.target.dataset.menos
-      if (mas && this.usado() + TIPOS[mas].costo <= PRESUPUESTO_BASE) this.config.flota[mas]++
+      if (mas && this.usado() + TIPOS[mas].costo <= this.config.presupuesto) this.config.flota[mas]++
       if (menos && this.config.flota[menos] > 0) this.config.flota[menos]--
       this.refrescarFlota()
     })
@@ -124,7 +125,54 @@ export class Menus {
       }
       sc.appendChild(b)
     }
-    $('#presupuesto-total').textContent = PRESUPUESTO_BASE
+    const sp = $('#selector-presupuesto')
+    for (const p of PRESUPUESTOS) {
+      const b = document.createElement('button')
+      b.className = 'btn'
+      b.textContent = p.nombre
+      b.title = `${p.valor} puntos`
+      b.dataset.pres = p.valor
+      b.onclick = () => this.cambiarPresupuesto(p.valor, true)
+      sp.appendChild(b)
+    }
+    for (const b of document.querySelectorAll('[data-presupuesto]'))
+      b.onclick = () => this.cambiarPresupuesto(this.config.presupuesto + Number(b.dataset.presupuesto))
+    this.refrescarFlota()
+  }
+
+  cambiarPresupuesto(valor, rearmar = false) {
+    const c = this.config
+    c.presupuesto = limitar(valor)
+    try { localStorage.setItem('presupuesto', c.presupuesto) } catch {}
+    if (rearmar) return this.sugerida()
+    // Si la flota ya no entra, se recorta de lo que más pesa en ella.
+    while (this.usado() > c.presupuesto) {
+      const k = ORDEN_TIPOS.reduce((a, b) => (c.flota[b] * TIPOS[b].costo > c.flota[a] * TIPOS[a].costo ? b : a))
+      c.flota[k]--
+    }
+    this.refrescarFlota()
+  }
+
+  // Flota sugerida para el presupuesto: Acorazados en las batallas grandes y
+  // el resto repartido como la mezcla base (3 Cazas, 2 Corbetas, 2
+  // Bombarderos, 2 Cruceros), completando lo que sobre.
+  sugerida() {
+    const p = this.config.presupuesto
+    const flota = Object.fromEntries(ORDEN_TIPOS.map((k) => [k, 0]))
+    if (p >= 8000) flota.acorazado = Math.floor(p / 8000)
+    const mezcla = { caza: 3, corbeta: 2, bombardero: 2, crucero: 2 }
+    const costoMezcla = Object.entries(mezcla).reduce((s, [k, n]) => s + TIPOS[k].costo * n, 0)
+    const f = (p - flota.acorazado * TIPOS.acorazado.costo) / costoMezcla
+    for (const [k, n] of Object.entries(mezcla)) flota[k] = Math.floor(n * f)
+    this.config.flota = flota
+    for (let agrego = true; agrego; ) {
+      agrego = false
+      for (const k of ['caza', 'corbeta', 'bombardero', 'crucero'])
+        if (this.usado() + TIPOS[k].costo <= p) {
+          flota[k]++
+          agrego = true
+        }
+    }
     this.refrescarFlota()
   }
 
@@ -135,8 +183,11 @@ export class Menus {
   refrescarFlota() {
     for (const k of ORDEN_TIPOS) $(`#n-${k}`).textContent = this.config.flota[k]
     const u = this.usado()
+    const total = this.config.presupuesto
     $('#presupuesto-usado').textContent = u
-    $('#presupuesto-barra').style.width = `${(u / PRESUPUESTO_BASE) * 100}%`
+    $('#presupuesto-total').textContent = total
+    $('#presupuesto-barra').style.width = `${(u / total) * 100}%`
+    for (const b of document.querySelectorAll('[data-pres]')) b.classList.toggle('activo', Number(b.dataset.pres) === total)
     for (const b of document.querySelectorAll('[data-dif]')) b.classList.toggle('activo', b.dataset.dif === this.config.dificultad)
     for (const b of document.querySelectorAll('[data-cal]')) b.classList.toggle('activo', b.dataset.cal === this.config.calidad)
     $('#btn-combatir').disabled = u === 0
@@ -157,6 +208,10 @@ export class Menus {
       <span>Duración</span><b>${m}:${String(s).padStart(2, '0')}</b><span></span>`
     mostrarPantalla('pantalla-fin')
   }
+}
+
+function limitar(v) {
+  return Math.min(PRESUPUESTO_MAX, Math.max(PRESUPUESTO_MIN, Math.round(v / 500) * 500))
 }
 
 function guardado(clave, porDefecto) {

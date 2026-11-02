@@ -11,7 +11,7 @@ import { ComandanteIA } from './sim/ia.js'
 import { Entrada } from './entrada.js'
 import { Hud } from './ui/hud.js'
 import { Menus, mostrarPantalla } from './ui/menus.js'
-import { FACCIONES, TIPOS, ORDEN_TIPOS, DIFICULTADES, PRESUPUESTO_BASE } from './datos.js'
+import { FACCIONES, TIPOS, ORDEN_TIPOS, DIFICULTADES } from './datos.js'
 
 const contenedor = document.getElementById('juego')
 const calidadInicial = (() => {
@@ -29,8 +29,8 @@ function escalaPuntos() {
   return renderer.domElement.height / (2 * Math.tan(THREE.MathUtils.degToRad(camara.fov / 2)))
 }
 const particulas = new Particulas(escena, calidadInicial === 'baja' ? 2500 : 5000, escalaPuntos())
-const proyectiles = new Proyectiles(escena, 1500)
-const motores = new Motores(escena, 400, escalaPuntos())
+const proyectiles = new Proyectiles(escena, 4000)
+const motores = new Motores(escena, 1000, escalaPuntos())
 const escudos = new Escudos(escena, 24)
 const ondas = new Ondas(escena, 12)
 const sonido = new Sonido()
@@ -104,8 +104,8 @@ document.getElementById('hud-comandos').addEventListener('click', (e) => {
 
 // --- Armado de la batalla ----------------------------------------------------
 
-function flotaEnemiga(dificultad) {
-  const presupuesto = PRESUPUESTO_BASE * DIFICULTADES[dificultad].presupuesto
+function flotaEnemiga(dificultad, presupuestoBase) {
+  const presupuesto = presupuestoBase * DIFICULTADES[dificultad].presupuesto
   const flota = Object.fromEntries(ORDEN_TIPOS.map((k) => [k, 0]))
   // Base pareja: un poco de todo, después al azar hasta gastar el presupuesto.
   let resto = presupuesto
@@ -116,7 +116,7 @@ function flotaEnemiga(dificultad) {
     }
   }
   const pesos = { caza: 3, corbeta: 2, bombardero: 2, crucero: 1.2, acorazado: 0.7 }
-  for (let intentos = 0; intentos < 50; intentos++) {
+  for (let intentos = 0; intentos < 400; intentos++) {
     const posibles = ORDEN_TIPOS.filter((k) => TIPOS[k].costo <= resto)
     if (!posibles.length) break
     const total = posibles.reduce((s, k) => s + pesos[k], 0)
@@ -138,9 +138,14 @@ function desplegar(batalla, equipo, flota) {
   const batallones = []
   porFila.forEach((fila, f) => {
     const separacion = f >= 2 ? 160 : 90
+    // Flotas grandes: hasta 8 por fila; el resto en capas arriba, abajo y atrás.
+    const ancho = Math.min(fila.length, 8)
     fila.forEach((k, i) => {
-      const x = (i - (fila.length - 1) / 2) * separacion
-      const centro = new THREE.Vector3(x, (Math.random() - 0.5) * 40 + (f === 3 ? -20 : 0), lado * (750 + f * 120))
+      const col = i % 8
+      const capa = Math.floor(i / 8)
+      const x = (col - (ancho - 1) / 2) * separacion
+      const y = (capa % 2 ? 1 : -1) * Math.ceil(capa / 2) * separacion * 0.6
+      const centro = new THREE.Vector3(x, y + (Math.random() - 0.5) * 40 + (f === 3 ? -20 : 0), lado * (750 + f * 120 + capa * 40))
       batallones.push(batalla.agregarBatallon(equipo, k, centro, rumbo))
     })
   })
@@ -165,7 +170,7 @@ function iniciarBatalla(config) {
   motores.puntos.material.uniforms.escala.value = escalaPuntos()
 
   const propios = desplegar(batalla, JUGADOR, config.flota)
-  desplegar(batalla, ENEMIGO, flotaEnemiga(config.dificultad))
+  desplegar(batalla, ENEMIGO, flotaEnemiga(config.dificultad, config.presupuesto))
   for (const n of batalla.naves) escena.add(n.malla)
 
   const ia = new ComandanteIA(batalla, config.dificultad)

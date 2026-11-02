@@ -45,9 +45,15 @@
     <div class="armado">
       <div class="panel lista-tipos" id="lista-tipos"></div>
       <div class="panel resumen">
-        <div class="fila-titulo">Presupuesto</div>
-        <div class="presupuesto"><span id="presupuesto-usado">0</span> / <span id="presupuesto-total">0</span></div>
+        <div class="fila-titulo">Tamaño de la batalla</div>
+        <div class="selector" id="selector-presupuesto"></div>
+        <div class="ajuste-presupuesto">
+          <button class="btn" data-presupuesto="-500" title="500 puntos menos">−</button>
+          <div class="presupuesto"><span id="presupuesto-usado">0</span> / <span id="presupuesto-total">0</span></div>
+          <button class="btn" data-presupuesto="500" title="500 puntos más">+</button>
+        </div>
         <div class="barra-presupuesto"><i id="presupuesto-barra"></i></div>
+        <div class="nota">El enemigo arma su flota con el mismo presupuesto (más o menos según la dificultad).</div>
         <div class="fila-titulo">Dificultad</div>
         <div class="selector" id="selector-dificultad"></div>
         <div class="fila-titulo">Calidad gráfica</div>

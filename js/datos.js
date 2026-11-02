@@ -166,3 +166,14 @@ export const DIFICULTADES = {
 }
 
 export const PRESUPUESTO_BASE = 4500
+
+// Tamaños de batalla que se ofrecen en el armado de flota (el jugador
+// también puede ajustar de a 500 entre el mínimo y el máximo).
+export const PRESUPUESTOS = [
+  { nombre: 'Escaramuza', valor: 2500 },
+  { nombre: 'Batalla', valor: 4500 },
+  { nombre: 'Guerra', valor: 8000 },
+  { nombre: 'Épica', valor: 14000 },
+]
+export const PRESUPUESTO_MIN = 1500
+export const PRESUPUESTO_MAX = 20000
