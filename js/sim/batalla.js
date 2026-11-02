@@ -71,6 +71,9 @@ export class Batallon {
     this.tactica = 'agresiva'
     this.topeVelocidad = Infinity
     this.atacadoEn = -99
+    // Para el informe de fin de batalla.
+    this.dañoCausado = 0
+    this.bajas = 0
   }
 
   get vivas() {
@@ -687,6 +690,7 @@ export class Batalla {
     o.ultimoImpacto = this.tiempo
     o.batallon.atacadoEn = this.tiempo
     this.estadisticas[p.autor.equipo].daño += p.daño
+    p.autor.batallon.dañoCausado += p.daño
     let resto = p.daño
     const enEscudo = Math.min(o.escudo, resto)
     o.escudo -= enEscudo
@@ -709,6 +713,7 @@ export class Batalla {
     o.giroMuerte = (o.esCapital ? 0.12 : 2.5) * (0.5 + Math.random())
     this.estadisticas[o.equipo].perdidas++
     this.estadisticas[autor.equipo].destruidas++
+    autor.batallon.bajas++
     this.eventos.push({ tipo: 'destruida', nave: o })
     if (!o.esCapital && this.terreno.asteroides.length) this.dañarRocasCerca(o.pos, 30, 60)
     if (!o.batallon.viva) this.eventos.push({ tipo: 'batallonPerdido', batallon: o.batallon })

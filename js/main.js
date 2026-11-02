@@ -11,6 +11,7 @@ import { Intro } from './ui/intro.js'
 import { Batalla, JUGADOR, ENEMIGO } from './sim/batalla.js'
 import { ComandanteIA } from './sim/ia.js'
 import { Terreno, MAPAS } from './sim/terreno.js'
+import { armarInforme } from './sim/informe.js'
 import { Terreno3D } from './motor/terreno3d.js'
 import { Tutorial, tutorialVisto } from './ui/tutorial.js'
 import { Entrada } from './entrada.js'
@@ -602,11 +603,16 @@ function cuadro() {
     if (p.batalla.terminada) {
       p.fin += dt
       if (p.fin > 4.5) {
-        const resultado = p.batalla.terminada
-        const tiempo = p.batalla.tiempo
-        const batalla = p.batalla
+        const informe = armarInforme({
+          resultado: p.batalla.terminada,
+          batalla: p.batalla,
+          segundos: p.batalla.tiempo,
+          dificultad: p.config.dificultad,
+        })
+        const mapa = MAPAS[p.batalla.terreno.tipo].nombre
+        const config = p.config
         terminarBatalla()
-        menus.mostrarFin(resultado, batalla, tiempo)
+        menus.mostrarFin(informe, mapa, config)
       }
     }
   } else if (!p) {

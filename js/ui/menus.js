@@ -31,6 +31,7 @@ export class Menus {
       else if (a === 'controles') alAbrirAyuda(false)
       else if (a === 'volver-titulo' || a === 'menu') mostrarPantalla('pantalla-titulo')
       else if (a === 'volver-faccion') mostrarPantalla('pantalla-faccion')
+      else if (a === 'cambiar-flota') mostrarPantalla('pantalla-flota')
       else if (a === 'sugerida') {
         this.sugerida()
       } else if (a === 'combatir' || a === 'revancha') this.alCombatir(this.config)
@@ -228,19 +229,56 @@ export class Menus {
     $('#btn-combatir').disabled = u === 0
   }
 
-  mostrarFin(resultado, batalla, segundos) {
-    $('#fin-titulo').textContent = resultado === 'victoria' ? 'Victoria' : 'Derrota'
-    $('#fin-sub').textContent =
-      resultado === 'victoria' ? 'La flota enemiga fue aniquilada' : 'Tu flota fue destruida'
-    const [j, e] = batalla.estadisticas
-    const m = Math.floor(segundos / 60)
-    const s = Math.floor(segundos % 60)
-    $('#fin-estadisticas').innerHTML = `
-      <span class="cab"></span><span class="cab">Vos</span><span class="cab">Enemigo</span>
-      <span>Naves destruidas</span><b>${j.destruidas}</b><b>${e.destruidas}</b>
-      <span>Naves perdidas</span><b>${j.perdidas}</b><b>${e.perdidas}</b>
-      <span>Daño causado</span><b>${Math.round(j.daño)}</b><b>${Math.round(e.daño)}</b>
-      <span>Duración</span><b>${m}:${String(s).padStart(2, '0')}</b><span></span>`
+  // Informe de batalla: los dos bandos lado a lado (qué tenían, qué les
+  // quedó), el puntaje con su desglose y el batallón destacado.
+  mostrarFin(informe, mapa, config = this.config) {
+    const n = (x) => Math.round(x).toLocaleString('es-AR')
+    const victoria = informe.resultado === 'victoria'
+    const c = config
+    $('#fin-titulo').textContent = victoria ? 'Victoria' : 'Derrota'
+    $('#fin-calificacion').textContent = informe.calificacion
+    const m = Math.floor(informe.segundos / 60)
+    const s = String(Math.floor(informe.segundos % 60)).padStart(2, '0')
+    const tamaño = PRESUPUESTOS.find((p) => p.valor === c.presupuesto)?.nombre ?? 'Batalla'
+    $('#fin-meta').innerHTML = [mapa, `${tamaño} · ${n(c.presupuesto)} pts`, DIFICULTADES[c.dificultad].nombre, `${m}:${s}`]
+      .map((x) => `<span>${x}</span>`)
+      .join('')
+
+    informe.lados.forEach((lado, i) => {
+      const f = FACCIONES[lado.faccion]
+      const pct = Math.round(lado.conservado * 100)
+      $(`#fin-lado-${i}`).style.setProperty('--color', f.acentoCss)
+      $(`#fin-lado-${i}`).innerHTML = `
+        <div class="lado-cab"><span>${i === 0 ? 'Tu flota' : 'Enemigo'}</span><b>${f.nombre}</b></div>
+        <div class="conservado"><b>${pct}%</b><span>de la flota sigue en pie</span></div>
+        <div class="barra-lado"><i style="width:${pct}%"></i></div>
+        <div class="detalle-naves">${lado.quedan} de ${lado.naves} naves</div>
+        <table class="tabla-tipos">
+          ${lado.porTipo
+            .map(
+              (t) => `<tr><td>${t.nombre}</td><td class="num">${t.quedan}<small> / ${t.total}</small></td>
+                <td class="mini"><i style="width:${(t.quedan / t.total) * 100}%"></i></td></tr>`,
+            )
+            .join('')}
+        </table>
+        <div class="daño-lado">Daño causado <b>${n(lado.daño)}</b></div>`
+    })
+
+    const d = informe.desglose
+    const linea = (txt, v, nota) => `<div class="linea-puntaje"><span>${txt}</span><b>${v > 0 ? '+' + n(v) : '—'}</b>${nota ? `<small>${nota}</small>` : ''}</div>`
+    $('#fin-puntaje').innerHTML = `
+      <div class="puntaje-titulo">Puntaje</div>
+      <div class="puntaje-total">${n(informe.puntaje)}</div>
+      ${linea('Valor enemigo destruido', d.destruido)}
+      ${linea('Flota conservada', d.supervivencia, victoria ? '' : 'solo en victoria')}
+      ${linea('Rapidez', d.rapidez, victoria ? '' : 'solo en victoria')}
+      <div class="linea-puntaje mult"><span>Dificultad ${DIFICULTADES[c.dificultad].nombre}</span><b>×${d.multiplicador}</b></div>`
+
+    const b = informe.destacado
+    $('#fin-destacado').innerHTML =
+      b && b.dañoCausado > 0
+        ? `<span class="etiqueta">Batallón destacado</span><b>${b.nombre}</b><span>${n(b.dañoCausado)} de daño · ${b.bajas} ${b.bajas === 1 ? 'nave derribada' : 'naves derribadas'}${b.viva ? '' : ' · cayó en combate'}</span>`
+        : ''
     mostrarPantalla('pantalla-fin')
   }
 }

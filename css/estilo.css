@@ -496,3 +496,55 @@ h1 { margin: 0; font-size: clamp(3rem, 9vw, 6rem); letter-spacing: 0.3em; paddin
 .control-volumen { display: grid; grid-template-columns: 64px 1fr 40px; align-items: center; gap: 8px; font-weight: 600; letter-spacing: 0.06em; text-transform: uppercase; font-size: 0.8rem; }
 .control-volumen b { text-align: right; font-variant-numeric: tabular-nums; color: var(--texto-tenue); }
 .control-volumen input { width: 100%; accent-color: var(--ambar); cursor: pointer; }
+
+/* --- Informe de fin de batalla ------------------------------------------ */
+.pantalla-informe.visible { padding: 16px; }
+.informe { width: min(1060px, 100%); display: flex; flex-direction: column; gap: 14px; }
+.informe-cab { text-align: center; }
+.informe-cab h1 { font-size: clamp(2.4rem, 7vw, 4.6rem); padding: 0; }
+.informe-calificacion { font-family: 'Cinzel', serif; font-size: clamp(1rem, 2vw, 1.35rem); color: #f2c27e; letter-spacing: 0.12em; margin-top: 2px; }
+.informe-meta { display: flex; justify-content: center; flex-wrap: wrap; gap: 6px; margin-top: 10px; }
+.informe-meta span { border: 1px solid var(--borde); padding: 2px 10px; font-size: 0.8rem; letter-spacing: 0.08em; text-transform: uppercase; color: var(--texto-tenue); }
+.informe-cuerpo { display: grid; grid-template-columns: 1fr minmax(240px, 0.85fr) 1fr; gap: 12px; }
+.lado { padding: 14px 16px; border-top: 2px solid var(--color); }
+.lado-cab { display: flex; justify-content: space-between; align-items: baseline; text-transform: uppercase; letter-spacing: 0.15em; font-size: 0.78rem; color: var(--texto-tenue); }
+.lado-cab b { color: var(--color); font-size: 0.95rem; }
+.conservado { display: flex; align-items: baseline; gap: 8px; margin-top: 8px; }
+.conservado b { font-size: 2.2rem; line-height: 1; color: #fff; }
+.conservado span { color: var(--texto-tenue); font-size: 0.85rem; }
+.barra-lado { height: 5px; background: rgba(255, 255, 255, 0.08); margin: 6px 0 4px; }
+.barra-lado i { display: block; height: 100%; background: var(--color); }
+.detalle-naves { font-size: 0.82rem; color: var(--texto-tenue); margin-bottom: 8px; }
+.tabla-tipos { width: 100%; border-collapse: collapse; font-size: 0.88rem; }
+.tabla-tipos td { padding: 3px 0; border-top: 1px solid rgba(150, 195, 230, 0.08); }
+.tabla-tipos .num { text-align: right; padding-right: 10px; font-weight: 700; white-space: nowrap; }
+.tabla-tipos small { color: var(--texto-tenue); font-weight: 500; }
+.tabla-tipos .mini { width: 34%; }
+.tabla-tipos .mini i { display: block; height: 4px; background: var(--color); opacity: 0.8; }
+.daño-lado { margin-top: 10px; font-size: 0.85rem; color: var(--texto-tenue); display: flex; justify-content: space-between; }
+.daño-lado b { color: #fff; }
+.puntaje { padding: 16px 18px; text-align: center; border-color: rgba(242, 194, 126, 0.5); }
+.puntaje-titulo { text-transform: uppercase; letter-spacing: 0.3em; font-size: 0.8rem; color: #f2c27e; }
+.puntaje-total { font-family: 'Cinzel', serif; font-weight: 800; font-size: clamp(2.4rem, 5vw, 3.4rem); line-height: 1.1; margin: 4px 0 12px;
+  background: linear-gradient(180deg, #fff3dc, #f2c27e 55%, #c26a2e); -webkit-background-clip: text; background-clip: text; color: transparent; }
+.linea-puntaje { display: grid; grid-template-columns: 1fr auto; gap: 0 10px; text-align: left; padding: 5px 0; border-top: 1px solid rgba(150, 195, 230, 0.1); font-size: 0.9rem; }
+.linea-puntaje b { color: var(--propio); }
+.linea-puntaje small { grid-column: 1 / -1; color: var(--texto-tenue); font-size: 0.72rem; }
+.linea-puntaje.mult b { color: #f2c27e; }
+.informe-destacado { text-align: center; display: flex; justify-content: center; align-items: baseline; gap: 10px; flex-wrap: wrap; min-height: 1em; }
+.informe-destacado .etiqueta { text-transform: uppercase; letter-spacing: 0.2em; font-size: 0.75rem; color: #f2c27e; }
+.informe-destacado b { font-size: 1.1rem; }
+.informe-destacado span:last-child { color: var(--texto-tenue); }
+.informe .botonera { margin-top: 0; }
+@media (max-width: 820px) {
+  .informe-cuerpo { grid-template-columns: 1fr 1fr; }
+  .puntaje { grid-column: 1 / -1; order: -1; }
+}
+@media (max-height: 640px) {
+  .informe { gap: 8px; }
+  .informe-cab h1 { font-size: 2.2rem; }
+  .lado, .puntaje { padding: 10px 12px; }
+  .conservado b { font-size: 1.6rem; }
+  .puntaje-total { font-size: 2.2rem; margin-bottom: 6px; }
+  .tabla-tipos { font-size: 0.8rem; }
+}
