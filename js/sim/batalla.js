@@ -31,7 +31,13 @@ export class Nave {
     this.quat = quat.clone()
     this.velocidad = 0
     this.estructura = this.tipo.estructuraMax
-    this.escudo = this.tipo.escudoMax
+    // Rasgo de la facción (ver FACCIONES en datos.js).
+    const rasgo = FACCIONES[batallon.faccion].rasgo ?? {}
+    this.escudoMax = this.tipo.escudoMax * (rasgo.escudo ?? 1)
+    this.velocidadMax = this.tipo.velocidad * (rasgo.velocidad ?? 1)
+    this.factorDaño = rasgo.daño ?? 1
+    this.factorRegen = rasgo.regenEscudo ?? 1
+    this.escudo = this.escudoMax
     this.ultimoImpacto = -99
     this.viva = true
     this.radio = plantilla.radio
@@ -99,7 +105,7 @@ export class Batallon {
     let e = 0, eMax = 0, s = 0, sMax = 0
     for (const n of this.naves) {
       eMax += n.tipo.estructuraMax
-      sMax += n.tipo.escudoMax
+      sMax += n.escudoMax
       if (n.viva) {
         e += n.estructura
         s += n.escudo
@@ -249,7 +255,7 @@ export class Batalla {
     const esp = Math.max(...batallones.map((b) => radioBatallon(b, this))) * 2.4
     const slots = slotsFormacion(formacion ?? batallones[0].formacion, batallones.length, esp)
     // El más lento marca el ritmo (como un grupo de ataque de Homeworld).
-    const tope = batallones.length > 1 ? Math.min(...batallones.map((b) => b.tipo.velocidad)) : Infinity
+    const tope = batallones.length > 1 ? Math.min(...batallones.map((b) => b.naves[0].velocidadMax)) : Infinity
     // Los más pesados al centro de la formación.
     const ordenados = [...batallones].sort((a, b) => b.tipo.largo - a.tipo.largo)
     ordenados.forEach((b, i) => {
@@ -384,7 +390,7 @@ export class Batalla {
     const b = n.batallon
     const t = n.tipo
     let destino = _v
-    let velDeseada = Math.min(t.velocidad, b.topeVelocidad)
+    let velDeseada = Math.min(n.velocidadMax, b.topeVelocidad)
     let llegar = true
 
     if (b.orden.tipo === 'atacar') {
@@ -408,7 +414,7 @@ export class Batalla {
               .copy(n.pos)
               .addScaledVector(tangente, 100)
               .addScaledVector(radial, THREE.MathUtils.clamp(dist - ideal, -80, 80))
-            velDeseada = Math.min(velDeseada, t.velocidad * 0.45)
+            velDeseada = Math.min(velDeseada, n.velocidadMax * 0.45)
           }
           llegar = false
         } else {
@@ -580,7 +586,7 @@ export class Batalla {
     if (arma.tipo !== 'flak') acierto *= obj.tipo.agilidad ?? 1
     if (!obj.esCapital && obj.batallon.tactica === 'evasiva') acierto *= 0.75
     const impacta = Math.random() < acierto
-    const daño = arma.daño * multiplicadorDaño(n.tipo.clave, obj.tipo.clave) * (0.85 + Math.random() * 0.3)
+    const daño = arma.daño * n.factorDaño * multiplicadorDaño(n.tipo.clave, obj.tipo.clave) * (0.85 + Math.random() * 0.3)
     const apunta = obj.pos.clone()
     // Flak contra naves chicas: no busca el impacto directo, estalla cerca
     // del blanco (más cerca si "acierta") y daña a todo lo que agarre.
@@ -721,8 +727,8 @@ export class Batalla {
 
   regenerar(n, dt) {
     const calma = this.tiempo - n.ultimoImpacto
-    if (calma > 5 && n.escudo < n.tipo.escudoMax)
-      n.escudo = Math.min(n.tipo.escudoMax, n.escudo + n.tipo.escudoMax * 0.07 * dt)
+    if (calma > 5 && n.escudo < n.escudoMax)
+      n.escudo = Math.min(n.escudoMax, n.escudo + n.escudoMax * 0.07 * n.factorRegen * dt)
     // Reparación de campo: las naves chicas se arreglan cerca de una capital
     // propia si no reciben fuego. Por eso vale la pena retirarse.
     if (!n.esCapital && calma > 6 && n.estructura < n.tipo.estructuraMax && this.cercaDeCapital(n))

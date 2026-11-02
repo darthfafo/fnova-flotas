@@ -3,7 +3,7 @@
 // en el informe de batalla.
 import { FACCIONES, DIFICULTADES, PRESUPUESTOS } from '../datos.js'
 import { MAPAS } from '../sim/terreno.js'
-import { mostrarPantalla } from './menus.js'
+import { mostrarPantalla, bloqueRasgo } from './menus.js'
 
 const $ = (s) => document.querySelector(s)
 const n = (x) => Math.round(x).toLocaleString('es-AR')
@@ -31,6 +31,9 @@ export class Salon {
       }
       if (a === 'salir') this.cuenta.salir()
       if (a === 'guardar-pendiente') this.abrirCuenta()
+    })
+    document.body.addEventListener('change', (e) => {
+      if (e.target.id === 'select-faccion') this.mostrarRasgo(e.target.value)
     })
     document.body.addEventListener('submit', (e) => {
       if (e.target.id === 'form-cuenta') {
@@ -100,13 +103,23 @@ export class Salon {
       </div>`}
       <form id="form-cuenta" class="form-cuenta">
         ${crear ? `<label>Nombre de comandante<input name="nombre" maxlength="20" minlength="3" required autocomplete="nickname" placeholder="Como te van a ver en el ranking" /></label>
-        <label>Facción<select name="faccion">${Object.values(FACCIONES).map((f) => `<option value="${f.clave}">${f.nombre}</option>`).join('')}</select></label>` : ''}
+        <label>Facción<select name="faccion" id="select-faccion">${Object.values(FACCIONES).map((f) => `<option value="${f.clave}">${f.nombre}</option>`).join('')}</select></label>
+        <div class="nota-faccion" id="nota-faccion" style="--color:${FACCIONES.guardianes.acentoCss}">${bloqueRasgo(FACCIONES.guardianes)}</div>
+        <p class="nota">Tu facción define tus naves y su rasgo en batalla. Con <b>Partida rápida</b> podés probar la otra cuando quieras.</p>` : ''}
         ${soloPerfil ? '' : `<label>Email<input name="email" type="email" required autocomplete="email" /></label>
         <label>Contraseña<input name="contraseña" type="password" minlength="6" required autocomplete="${crear ? 'new-password' : 'current-password'}" placeholder="${crear ? 'Al menos 6 caracteres' : ''}" /></label>`}
         <div class="error-cuenta" id="error-cuenta"></div>
         <button class="btn grande" type="submit">${soloPerfil ? 'Guardar' : crear ? 'Crear comandante' : 'Ingresar'}</button>
       </form>
       ${this.pendiente ? '<p class="nota">Al ingresar se guarda también el resultado de la batalla que acabás de jugar.</p>' : ''}`
+  }
+
+  // Al elegir facción en el formulario se muestra su rasgo de batalla.
+  mostrarRasgo(clave) {
+    const nota = $('#nota-faccion')
+    if (!nota) return
+    nota.style.setProperty('--color', FACCIONES[clave].acentoCss)
+    nota.innerHTML = bloqueRasgo(FACCIONES[clave])
   }
 
   async enviarFormulario(form) {

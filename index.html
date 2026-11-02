@@ -49,6 +49,10 @@
       <p class="sub" id="lema-portada">Tres siglos después de la Quema, la guerra vuelve a las estrellas.</p>
       <div class="botonera vertical" id="botones-titulo">
         <button class="btn grande" data-accion="nueva">Jugar</button>
+        <div class="fila-botones">
+          <button class="btn" data-accion="rapida" title="Cualquier facción, flota sugerida y mapa al azar">Partida rápida</button>
+          <button class="btn" data-accion="multijugador" title="Batallas contra otros comandantes">Multijugador</button>
+        </div>
         <button class="btn" data-accion="salon">Salón de la Fama</button>
         <button class="btn" data-accion="tutorial">Tutorial</button>
         <div class="fila-botones">
@@ -64,6 +68,7 @@
 
   <section id="pantalla-faccion" class="pantalla">
     <h2 class="encabezado">Elegí tu facción</h2>
+    <p class="faccion-aviso" id="faccion-aviso"></p>
     <div class="facciones" id="lista-facciones"></div>
     <div class="botonera"><button class="btn" data-accion="volver-titulo">Volver</button></div>
   </section>

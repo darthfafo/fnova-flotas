@@ -65,6 +65,7 @@ let pausa = false
 const menus = new Menus({
   alCombatir: (config) => iniciarBatalla(config),
   alAbrirAyuda: (enBatalla) => abrirAyuda(enBatalla),
+  faccionFija: () => cuenta.perfil?.faccion ?? null,
   // Batalla chica y fácil, con el tutorial desde el primer paso.
   alTutorial: () =>
     iniciarBatalla(

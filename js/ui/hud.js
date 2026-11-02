@@ -352,7 +352,7 @@ export class Hud {
     g.fillStyle = 'rgba(0,0,0,0.55)'
     g.fillRect(bx - 1, by - 1, w + 2, 7)
     g.fillStyle = '#5cc8ff'
-    g.fillRect(bx, by, w * (nave.escudo / nave.tipo.escudoMax), 2)
+    g.fillRect(bx, by, w * (nave.escudo / nave.escudoMax), 2)
     const f = nave.estructura / nave.tipo.estructuraMax
     g.fillStyle = f > 0.5 ? '#8be07a' : f > 0.25 ? '#ffb648' : '#ff5a4a'
     g.fillRect(bx, by + 3, w * f, 2)

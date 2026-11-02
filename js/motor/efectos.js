@@ -269,7 +269,7 @@ export class Motores {
       if (!n.viva || (n.malla && !n.malla.visible)) continue
       _v.set(0, 0, n.cola * 0.92).applyQuaternion(n.quat).add(n.pos)
       this.pos.set([_v.x, _v.y, _v.z], i * 3)
-      const empuje = 0.35 + 0.65 * Math.min(1, n.velocidad / n.tipo.velocidad)
+      const empuje = 0.35 + 0.65 * Math.min(1, n.velocidad / n.velocidadMax)
       this.col.set([n.colorMotor.r, n.colorMotor.g, n.colorMotor.b], i * 3)
       this.tam[i] = n.radio * (n.esCapital ? 0.8 : 3) * empuje
       this.alfa[i] = 0.9 * empuje

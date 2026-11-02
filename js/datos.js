@@ -16,6 +16,15 @@ export const FACCIONES = {
     acentoCss: '#3fa9ff',
     disparo: 0x7cc8ff,
     modelos: { caza: 'challenger', corbeta: 'dispatcher', bombardero: 'omen', crucero: 'insurgent', acorazado: 'imperial' },
+    // Rasgo de batalla: aguantan más, pegan igual, se mueven un poco más lento.
+    rasgo: {
+      nombre: 'Disciplina del Crisol',
+      escudo: 1.15,
+      regenEscudo: 1.3,
+      velocidad: 0.93,
+      efectos: ['+15% de escudo en todas las naves', 'Los escudos se recargan un 30% más rápido', '−7% de velocidad'],
+      estilo: 'Brillan con cazas y corbetas que entran y salen del combate. Les cuesta perseguir.',
+    },
   },
   inquisidores: {
     clave: 'inquisidores',
@@ -29,6 +38,15 @@ export const FACCIONES = {
     acentoCss: '#ff5a36',
     disparo: 0xffa040,
     modelos: { caza: 'striker', corbeta: 'bob', bombardero: 'spitfire', crucero: 'zenith', acorazado: 'pancake' },
+    // Rasgo de batalla: pegan más y son más rápidos, con escudos más débiles.
+    rasgo: {
+      nombre: 'Tecnología prohibida',
+      daño: 1.14,
+      velocidad: 1.08,
+      escudo: 0.88,
+      efectos: ['+14% de daño en todas las armas', '+8% de velocidad', '−12% de escudo'],
+      estilo: 'Golpean primero y ganan los duelos de naves capitales. Sufren contra enjambres que se reparan.',
+    },
   },
 }
 

@@ -597,3 +597,17 @@ h1 { margin: 0; font-size: clamp(3rem, 9vw, 6rem); letter-spacing: 0.3em; paddin
 body:has(#pantalla-titulo.visible) .btn-cuenta:not([hidden]) { display: flex; }
 .pantalla-armado.visible { padding-top: 48px; }
 #pantalla-salon.visible { padding-top: 48px; }
+
+/* --- Rasgos de facción ---------------------------------------------------- */
+.faccion-aviso { margin: -12px 0 16px; color: var(--texto-tenue); text-align: center; max-width: 720px; }
+.faccion-aviso b { color: #f2c27e; }
+.rasgo { margin-top: 10px; padding-top: 8px; border-top: 1px solid var(--borde); font-size: 0.88rem; }
+.rasgo-nombre { text-transform: uppercase; letter-spacing: 0.12em; font-size: 0.75rem; color: var(--color, var(--ambar)); font-weight: 700; }
+.rasgo ul { margin: 4px 0; padding-left: 16px; }
+.rasgo li.pro { color: var(--propio); }
+.rasgo li.contra { color: #ff8a7a; }
+.rasgo-estilo { color: var(--texto-tenue); font-style: italic; }
+.tarjeta-faccion .imagen { height: clamp(120px, 24vh, 240px); }
+.tarjeta-faccion p { margin: 6px 0; font-size: 0.92rem; }
+.nota-faccion .rasgo { margin-top: 0; border-top: 0; padding-top: 0; }
+.ventana-cuenta { max-height: 94vh; overflow-y: auto; }

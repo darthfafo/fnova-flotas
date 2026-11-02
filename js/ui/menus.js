@@ -9,7 +9,10 @@ export function mostrarPantalla(id) {
 }
 
 export class Menus {
-  constructor({ alCombatir, alAbrirAyuda, alTutorial }) {
+  // faccionFija: devuelve la facción del comandante con sesión iniciada (o null).
+  constructor({ alCombatir, alAbrirAyuda, alTutorial, faccionFija = () => null }) {
+    this.faccionFija = faccionFija
+    this.modo = 'normal' // 'normal' (tu comandante) o 'rapida' (cualquier facción, sin armar flota)
     this.config = {
       faccion: 'guardianes',
       dificultad: 'normal',
@@ -26,16 +29,36 @@ export class Menus {
     document.body.addEventListener('click', (e) => {
       const a = e.target.closest('[data-accion]')?.dataset.accion
       if (!a) return
-      if (a === 'nueva') mostrarPantalla('pantalla-faccion')
+      if (a === 'nueva') this.jugar()
+      else if (a === 'rapida') {
+        this.modo = 'rapida'
+        $('#faccion-aviso').innerHTML = '<b>Partida rápida:</b> elegí cualquier facción y entrás directo a la batalla con una flota sugerida.'
+        mostrarPantalla('pantalla-faccion')
+      }
       else if (a === 'tutorial') alTutorial()
       else if (a === 'controles') alAbrirAyuda(false)
       else if (a === 'volver-titulo' || a === 'menu') mostrarPantalla('pantalla-titulo')
-      else if (a === 'volver-faccion') mostrarPantalla('pantalla-faccion')
+      else if (a === 'volver-faccion') this.faccionFija() ? mostrarPantalla('pantalla-titulo') : mostrarPantalla('pantalla-faccion')
       else if (a === 'cambiar-flota') mostrarPantalla('pantalla-flota')
       else if (a === 'sugerida') {
         this.sugerida()
       } else if (a === 'combatir' || a === 'revancha') this.alCombatir(this.config)
     })
+  }
+
+  // "Jugar": con sesión iniciada se juega con la facción del comandante; sin
+  // sesión se elige facción.
+  jugar() {
+    this.modo = 'normal'
+    const fija = this.faccionFija()
+    if (fija) {
+      this.config.faccion = fija
+      document.documentElement.style.setProperty('--acento', FACCIONES[fija].acentoCss)
+      this.refrescarFlota()
+      return mostrarPantalla('pantalla-flota')
+    }
+    $('#faccion-aviso').innerHTML = 'Sin sesión iniciada podés jugar con cualquier facción. <b>Creá un comandante</b> para entrar al Salón de la Fama.'
+    mostrarPantalla('pantalla-faccion')
   }
 
   cargaLista() {
@@ -60,10 +83,16 @@ export class Menus {
           <h3>${f.nombre}</h3>
           <div class="lema">${f.lema}</div>
           <p>${f.descripcion}</p>
+          ${bloqueRasgo(f)}
         </div>`
       t.addEventListener('click', () => {
         this.config.faccion = f.clave
         document.documentElement.style.setProperty('--acento', f.acentoCss)
+        if (this.modo === 'rapida') {
+          // Partida rápida: flota sugerida, mapa al azar y a pelear.
+          this.sugerida()
+          return this.alCombatir({ ...this.config, mapa: 'azar' })
+        }
         this.refrescarFlota()
         mostrarPantalla('pantalla-flota')
       })
@@ -220,6 +249,8 @@ export class Menus {
     $('#composicion').innerHTML = `<b>${naves}</b> naves en <b>${batallones}</b> batallones<span>${ORDEN_TIPOS.filter((k) => f[k]).map((k) => `${f[k]} ${TIPOS[k].nombre}`).join(' · ')}</span>`
     const fa = FACCIONES[this.config.faccion]
     $('#armado-faccion').innerHTML = `<i style="background:${fa.acentoCss}"></i>${fa.nombre}`
+    $('#armado-faccion').title = `${fa.rasgo.nombre}: ${fa.rasgo.efectos.join(' · ')}`
+    $('[data-accion="volver-faccion"]').textContent = this.faccionFija() ? '‹ Inicio' : '‹ Facción'
     $('#presupuesto-barra').style.width = `${(u / total) * 100}%`
     for (const b of document.querySelectorAll('[data-pres]')) b.classList.toggle('activo', Number(b.dataset.pres) === total)
     for (const b of document.querySelectorAll('[data-dif]')) b.classList.toggle('activo', b.dataset.dif === this.config.dificultad)
@@ -281,6 +312,13 @@ export class Menus {
         : ''
     mostrarPantalla('pantalla-fin')
   }
+}
+
+// Rasgo de batalla de una facción, para las tarjetas y la ventana de cuenta.
+export function bloqueRasgo(f) {
+  return `<div class="rasgo"><div class="rasgo-nombre">En batalla · ${f.rasgo.nombre}</div>
+    <ul>${f.rasgo.efectos.map((e) => `<li class="${e.startsWith('−') ? 'contra' : 'pro'}">${e}</li>`).join('')}</ul>
+    <div class="rasgo-estilo">${f.rasgo.estilo}</div></div>`
 }
 
 function limitar(v) {
