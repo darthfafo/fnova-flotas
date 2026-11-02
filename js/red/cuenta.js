@@ -9,7 +9,7 @@ const BIBLIOTECA = 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.117.3/+
 // Captcha de Cloudflare Turnstile para registrarse e ingresar. Con null no se
 // pide captcha. La clave del sitio es pública; la secreta va solo en Supabase
 // (Authentication → Attack Protection).
-export const CAPTCHA_TURNSTILE = null
+export const CAPTCHA_TURNSTILE = '0x4AAAAAAFwGFn1jvsNeyTPW'
 
 let cliente = null
 export async function supabase() {
