@@ -449,7 +449,7 @@ h1 { margin: 0; font-size: clamp(3rem, 9vw, 6rem); letter-spacing: 0.3em; paddin
 }
 .titulo-flotas { display: flex; align-items: center; gap: 16px; justify-content: center; margin: 8px 0 4px; }
 .titulo-flotas::before, .titulo-flotas::after { content: ''; height: 1px; width: clamp(40px, 10vw, 120px); background: linear-gradient(90deg, transparent, #7fc4ff, transparent); }
-.titulo-flotas span { font-weight: 700; letter-spacing: 0.7em; padding-left: 0.7em; font-size: clamp(0.95rem, 1.8vw, 1.25rem); color: #a9d6ff; text-transform: uppercase; }
+.titulo-flotas span { font-weight: 700; letter-spacing: 0.45em; padding-left: 0.45em; font-size: clamp(0.95rem, 1.8vw, 1.25rem); color: #a9d6ff; text-transform: uppercase; }
 .fila-botones { display: flex; gap: 10px; }
 .fila-botones .btn { flex: 1; }
 .titulo-bloque.aparece > * { animation: subir 1.2s cubic-bezier(0.2, 0.7, 0.2, 1) both; }
