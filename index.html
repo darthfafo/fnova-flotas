@@ -1,0 +1,172 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>FNOVA Flotas</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Rajdhani:wght@400;500;600;700&display=swap" />
+  <link rel="stylesheet" href="css/estilo.css" />
+  <script type="importmap">
+    {
+      "imports": {
+        "three": "https://cdn.jsdelivr.net/npm/three@0.169.0/build/three.module.js",
+        "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.169.0/examples/jsm/"
+      }
+    }
+  </script>
+</head>
+<body>
+  <div id="juego"></div>
+  <canvas id="superposicion"></canvas>
+
+  <!-- Pantallas de menú -->
+  <section id="pantalla-titulo" class="pantalla visible">
+    <div class="titulo-bloque">
+      <div class="marca">FNOVA</div>
+      <h1>FLOTAS</h1>
+      <p class="sub">Batallas de escuadrones en el vacío</p>
+      <div class="cargando" id="cargando"><div class="barra"><i id="carga-barra"></i></div><span id="carga-texto">Cargando cascos…</span></div>
+      <div class="botonera vertical" id="botones-titulo" hidden>
+        <button class="btn grande" data-accion="nueva">Nueva batalla</button>
+        <button class="btn" data-accion="controles">Controles</button>
+      </div>
+    </div>
+  </section>
+
+  <section id="pantalla-faccion" class="pantalla">
+    <h2 class="encabezado">Elegí tu facción</h2>
+    <div class="facciones" id="lista-facciones"></div>
+    <div class="botonera"><button class="btn" data-accion="volver-titulo">Volver</button></div>
+  </section>
+
+  <section id="pantalla-flota" class="pantalla">
+    <h2 class="encabezado">Armá tu flota</h2>
+    <div class="armado">
+      <div class="panel lista-tipos" id="lista-tipos"></div>
+      <div class="panel resumen">
+        <div class="fila-titulo">Presupuesto</div>
+        <div class="presupuesto"><span id="presupuesto-usado">0</span> / <span id="presupuesto-total">0</span></div>
+        <div class="barra-presupuesto"><i id="presupuesto-barra"></i></div>
+        <div class="fila-titulo">Dificultad</div>
+        <div class="selector" id="selector-dificultad"></div>
+        <div class="fila-titulo">Calidad gráfica</div>
+        <div class="selector" id="selector-calidad"></div>
+        <div class="fila-titulo">Contras</div>
+        <ul class="contras">
+          <li><b>Corbeta</b> → Caza</li>
+          <li><b>Caza</b> → Bombardero</li>
+          <li><b>Bombardero</b> → Crucero, Acorazado</li>
+          <li><b>Crucero</b> → Corbeta, Caza</li>
+          <li><b>Acorazado</b> → Crucero (+25% a todo)</li>
+        </ul>
+        <div class="botonera vertical">
+          <button class="btn" data-accion="sugerida">Flota sugerida</button>
+          <button class="btn grande" data-accion="combatir" id="btn-combatir">Al combate</button>
+          <button class="btn" data-accion="volver-faccion">Volver</button>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section id="pantalla-fin" class="pantalla">
+    <div class="titulo-bloque">
+      <h1 id="fin-titulo">Victoria</h1>
+      <p class="sub" id="fin-sub"></p>
+      <div class="panel estadisticas" id="fin-estadisticas"></div>
+      <div class="botonera">
+        <button class="btn grande" data-accion="revancha">Revancha</button>
+        <button class="btn" data-accion="menu">Menú</button>
+      </div>
+    </div>
+  </section>
+
+  <!-- HUD de batalla -->
+  <div id="hud" hidden>
+    <header class="barra-superior">
+      <div class="faccion-hud" id="hud-faccion"></div>
+      <div class="balance">
+        <span id="hud-propia">0</span>
+        <div class="balance-barra"><i id="hud-balance"></i></div>
+        <span id="hud-enemiga">0</span>
+      </div>
+      <div class="botonera chica">
+        <span class="reloj" id="hud-reloj">00:00</span>
+        <button class="btn chico" data-accion="sonido" id="btn-sonido" title="Activar o silenciar el sonido">Sonido</button>
+        <button class="btn chico" data-accion="sensores" title="Vista táctica (Espacio)">Sensores</button>
+        <button class="btn chico" data-accion="pausa" title="Pausa y controles (Esc)">Pausa</button>
+      </div>
+    </header>
+
+    <aside class="panel flota" id="hud-flota"></aside>
+
+    <section class="panel seleccion" id="hud-seleccion"></section>
+
+    <nav class="panel comandos" id="hud-comandos">
+      <div class="grupo-comandos">
+        <button class="btn comando" data-cmd="mover"><b>M</b>Mover</button>
+        <button class="btn comando" data-cmd="atacar"><b>A</b>Atacar</button>
+        <button class="btn comando" data-cmd="detener"><b>S</b>Detener</button>
+        <button class="btn comando" data-cmd="enfocar"><b>F</b>Enfocar</button>
+      </div>
+      <div class="grupo-comandos">
+        <button class="btn comando" data-formacion="delta"><b>Z</b>Delta</button>
+        <button class="btn comando" data-formacion="muro"><b>X</b>Muro</button>
+        <button class="btn comando" data-formacion="esfera"><b>C</b>Esfera</button>
+        <button class="btn comando" data-formacion="garra"><b>V</b>Garra</button>
+      </div>
+      <div class="grupo-comandos">
+        <button class="btn comando" data-tactica="agresiva"><b>T</b>Agresiva</button>
+        <button class="btn comando" data-tactica="neutral">Neutral</button>
+        <button class="btn comando" data-tactica="evasiva">Evasiva</button>
+      </div>
+    </nav>
+
+    <div class="aviso-modo" id="hud-modo" hidden></div>
+    <ul class="registro" id="hud-registro"></ul>
+  </div>
+
+  <div id="ayuda" class="pantalla superpuesta">
+    <div class="panel ayuda">
+      <h2 class="encabezado" id="ayuda-titulo">Controles</h2>
+      <div class="columnas">
+        <div>
+          <h3>Touchpad</h3>
+          <dl>
+            <dt>Tocar / clic</dt><dd>Seleccionar batallón</dd>
+            <dt>Clic sostenido + arrastrar</dt><dd>Selección por recuadro</dd>
+            <dt>Shift + clic</dt><dd>Sumar a la selección</dd>
+            <dt>Doble clic</dt><dd>Todos los del mismo tipo</dd>
+            <dt>Deslizar con dos dedos</dt><dd>Girar la cámara</dd>
+            <dt>Pellizcar</dt><dd>Zoom</dd>
+            <dt>Clic con dos dedos</dt><dd>Orden: mover al punto o atacar al enemigo</dd>
+          </dl>
+        </div>
+        <div>
+          <h3>Teclado</h3>
+          <dl>
+            <dt>M</dt><dd>Mover en 3D (Shift cambia la altura, clic confirma)</dd>
+            <dt>A</dt><dd>Atacar (después clic en un enemigo)</dd>
+            <dt>S</dt><dd>Detener</dd>
+            <dt>F</dt><dd>Enfocar y seguir la selección</dd>
+            <dt>Espacio</dt><dd>Vista táctica de sensores</dd>
+            <dt>Z X C V</dt><dd>Formación Delta / Muro / Esfera / Garra</dd>
+            <dt>T</dt><dd>Cambiar táctica</dd>
+            <dt>Tab</dt><dd>Siguiente batallón</dd>
+            <dt>Ctrl + 1…9 / 1…9</dt><dd>Guardar / elegir grupo</dd>
+            <dt>Ctrl + A</dt><dd>Seleccionar toda la flota</dd>
+            <dt>Flechas · Q E · + −</dt><dd>Mover · girar · zoom de cámara</dd>
+            <dt>Esc</dt><dd>Cancelar / pausa</dd>
+          </dl>
+        </div>
+      </div>
+      <div class="botonera" id="ayuda-botones">
+        <button class="btn grande" data-accion="cerrar-ayuda">Continuar</button>
+        <button class="btn" data-accion="abandonar" id="btn-abandonar" hidden>Abandonar batalla</button>
+      </div>
+    </div>
+  </div>
+
+  <script type="module" src="js/main.js"></script>
+</body>
+</html>

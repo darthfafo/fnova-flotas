@@ -1,0 +1,168 @@
+// Catálogo de batallones y facciones. Los números de Ataque / Escudo /
+// Estructura parten de servidor/src/naves.ts de FNOVA y se escalan para que
+// una batalla en tiempo real dure minutos y no segundos: las naves capitales
+// reciben más multiplicador de aguante que las chicas, igual que en Homeworld.
+
+export const FACCIONES = {
+  guardianes: {
+    clave: 'guardianes',
+    nombre: 'Guardianes',
+    lema: 'La Orden que hace cumplir la prohibición',
+    descripcion:
+      'Custodios de la ley post-Quema. Cascos de bronce curtido con circuitos azules de tecnología antigua. Disciplina, formación cerrada y blindaje.',
+    imagen: 'assets/img/guardianes.jpg',
+    casco: [1.08, 0.92, 0.72], // tinte cálido de bronce sobre el gris del modelo
+    acento: 0x3fa9ff,
+    acentoCss: '#3fa9ff',
+    disparo: 0x7cc8ff,
+    modelos: { caza: 'challenger', corbeta: 'dispatcher', bombardero: 'omen', crucero: 'insurgent', acorazado: 'imperial' },
+  },
+  inquisidores: {
+    clave: 'inquisidores',
+    nombre: 'Inquisidores',
+    lema: 'La Orden que no le teme al conocimiento',
+    descripcion:
+      'Herejes pragmáticos que reactivan lo que las Mentes dejaron. Aleación oscura con vetas rojas y ámbar. Agresivos y difíciles de predecir.',
+    imagen: 'assets/img/inquisidores.jpg',
+    casco: [0.62, 0.6, 0.64],
+    acento: 0xff4a2a,
+    acentoCss: '#ff5a36',
+    disparo: 0xffa040,
+    modelos: { caza: 'striker', corbeta: 'bob', bombardero: 'spitfire', crucero: 'zenith', acorazado: 'pancake' },
+  },
+}
+
+// Clase de tamaño: decide la puntería de quien dispara (un cañón de
+// Acorazado casi no le acierta a un Caza) y cómo se mueve la nave.
+export const CHICA = 'chica'
+export const CAPITAL = 'capital'
+
+export const TIPOS = {
+  caza: {
+    clave: 'caza',
+    nombre: 'Caza',
+    clase: CHICA,
+    porBatallon: 5,
+    costo: 300,
+    largo: 7,
+    ataque: 40, escudo: 10, estructura: 80, // FNOVA
+    escudoMax: 40, estructuraMax: 130,
+    velocidad: 78, giro: 2.6, aceleracion: 60,
+    armas: [{ tipo: 'laser', daño: 6, cadencia: 0.32, alcance: 210, cono: 0.22 }],
+    ventaja: { bombardero: 1.75 },
+    rol: 'Caza parejo y rápido. Intercepta Bombarderos antes de que lleguen a tus capitales.',
+  },
+  corbeta: {
+    clave: 'corbeta',
+    nombre: 'Corbeta',
+    clase: CHICA,
+    porBatallon: 3,
+    costo: 300,
+    largo: 6,
+    ataque: 55, escudo: 6, estructura: 48,
+    escudoMax: 35, estructuraMax: 130,
+    agilidad: 0.85, // le acierta un 15% menos todo lo que le dispara (salvo el flak)
+    velocidad: 92, giro: 3.0, aceleracion: 75,
+    armas: [{ tipo: 'laser', daño: 10, cadencia: 0.3, alcance: 180, cono: 0.25 }],
+    ventaja: { caza: 1.9 },
+    rol: 'Interceptor ágil: le acierta menos todo lo que le dispara y destroza Cazas. Sufre contra el flak.',
+  },
+  bombardero: {
+    clave: 'bombardero',
+    nombre: 'Bombardero',
+    clase: CHICA,
+    porBatallon: 2,
+    costo: 450,
+    largo: 11,
+    ataque: 70, escudo: 25, estructura: 180,
+    escudoMax: 120, estructuraMax: 420,
+    velocidad: 50, giro: 1.4, aceleracion: 30,
+    armas: [{ tipo: 'torpedo', daño: 120, cadencia: 2.2, alcance: 300, cono: 0.35 }],
+    ventaja: { crucero: 2, acorazado: 1.75 },
+    rol: 'Torpedos lentos y devastadores contra naves capitales. Indefenso ante cazas.',
+  },
+  crucero: {
+    clave: 'crucero',
+    nombre: 'Crucero',
+    clase: CAPITAL,
+    porBatallon: 1,
+    costo: 900,
+    largo: 48,
+    ataque: 85, escudo: 40, estructura: 260,
+    escudoMax: 700, estructuraMax: 3600,
+    velocidad: 22, giro: 0.38, aceleracion: 6,
+    armas: [
+      // Dos torretas en el eje (cubren casi todo) y una por banda.
+      { tipo: 'flak', daño: 8, cadencia: 0.55, alcance: 420, montaje: [0, 0.25, 0.25] },
+      { tipo: 'flak', daño: 8, cadencia: 0.55, alcance: 420, montaje: [0, -0.2, -0.1] },
+      { tipo: 'flak', daño: 8, cadencia: 0.55, alcance: 420, montaje: [-0.3, 0.2, -0.2] },
+      { tipo: 'flak', daño: 8, cadencia: 0.55, alcance: 420, montaje: [0.3, 0.2, -0.2] },
+    ],
+    ventaja: { caza: 1.35, corbeta: 1.5, bombardero: 1.25 },
+    rol: 'Torretas de flak que barren Corbetas y Cazas. Necesita escolta contra los Bombarderos.',
+  },
+  acorazado: {
+    clave: 'acorazado',
+    nombre: 'Acorazado',
+    clase: CAPITAL,
+    porBatallon: 1,
+    costo: 1800,
+    largo: 85,
+    ataque: 120, escudo: 60, estructura: 400,
+    escudoMax: 1800, estructuraMax: 6500,
+    velocidad: 13, giro: 0.22, aceleracion: 3,
+    armas: [
+      { tipo: 'cañon', daño: 45, cadencia: 1.6, alcance: 620, montaje: [0, 0.3, 0.4] },
+      { tipo: 'cañon', daño: 45, cadencia: 1.6, alcance: 620, montaje: [0, 0.3, 0.1] },
+      { tipo: 'flak', daño: 12.5, cadencia: 0.6, alcance: 420, montaje: [-0.35, 0.15, -0.1] },
+      { tipo: 'flak', daño: 12.5, cadencia: 0.6, alcance: 420, montaje: [0.35, 0.15, -0.1] },
+      { tipo: 'flak', daño: 12.5, cadencia: 0.6, alcance: 420, montaje: [0, -0.2, 0] },
+      { tipo: 'cañon', daño: 45, cadencia: 1.6, alcance: 620, montaje: [0, 0.3, -0.3] },
+    ],
+    ventajaGeneral: 1.25,
+    rol: 'Nave capital definitiva: +25% de daño contra todo y gana el duelo contra el Crucero. Necesita escolta contra Bombarderos.',
+  },
+}
+
+export const ORDEN_TIPOS = ['caza', 'corbeta', 'bombardero', 'crucero', 'acorazado']
+
+// Probabilidad de acierto según el arma y el tamaño del blanco.
+export const PUNTERIA = {
+  laser: { chica: 0.55, capital: 0.95 },
+  torpedo: { chica: 0.12, capital: 0.92 },
+  flak: { chica: 0.5, capital: 0.9 },
+  cañon: { chica: 0.14, capital: 0.95 },
+}
+
+export const PROYECTIL = {
+  laser: { velocidad: 520, largo: 7, grosor: 0.5 },
+  torpedo: { velocidad: 150, largo: 5, grosor: 1.6 },
+  flak: { velocidad: 480, largo: 6, grosor: 0.7 },
+  cañon: { velocidad: 360, largo: 16, grosor: 1.8 },
+}
+
+export function multiplicadorDaño(tipoAtacante, tipoObjetivo) {
+  const t = TIPOS[tipoAtacante]
+  return (t.ventajaGeneral ?? 1) * (t.ventaja?.[tipoObjetivo] ?? 1)
+}
+
+export const FORMACIONES = {
+  delta: { nombre: 'Delta', tecla: 'Z' },
+  muro: { nombre: 'Muro', tecla: 'X' },
+  esfera: { nombre: 'Esfera', tecla: 'C' },
+  garra: { nombre: 'Garra', tecla: 'V' },
+}
+
+export const TACTICAS = {
+  agresiva: { nombre: 'Agresiva', alcanceDeteccion: 1400 },
+  neutral: { nombre: 'Neutral', alcanceDeteccion: 650 },
+  evasiva: { nombre: 'Evasiva', alcanceDeteccion: 0 },
+}
+
+export const DIFICULTADES = {
+  facil: { nombre: 'Fácil', presupuesto: 0.8, reaccion: 3.5, usaContras: false },
+  normal: { nombre: 'Normal', presupuesto: 1, reaccion: 1.5, usaContras: true },
+  dificil: { nombre: 'Difícil', presupuesto: 1.25, reaccion: 0.6, usaContras: true },
+}
+
+export const PRESUPUESTO_BASE = 4500
