@@ -740,6 +740,57 @@ window.__flotas = {
     return partida
   },
   efectos: { particulas, sonido, ondas, procesarEventos, sincronizarNaves },
+  motor: { renderer, escena, camara, orbital },
+  // Imagen para compartir: el cuadro 3D actual con el título encima, guardada
+  // como assets/img/<nombre>.jpg por el servidor local (herramientas/servidor.py).
+  async capturar({ nombre = 'compartir', ancho = 1200, alto = 630 } = {}) {
+    await document.fonts.load('800 80px Cinzel')
+    await document.fonts.load('700 20px Rajdhani')
+    const lienzo = document.createElement('canvas')
+    lienzo.width = ancho
+    lienzo.height = alto
+    const g = lienzo.getContext('2d')
+    renderer.render(escena, camara)
+    g.drawImage(renderer.domElement, 0, 0, ancho, alto)
+    // Oscurece la izquierda para el texto y da un poco de viñeta.
+    const lado = g.createLinearGradient(0, 0, ancho * 0.75, 0)
+    lado.addColorStop(0, 'rgba(2,3,8,0.88)')
+    lado.addColorStop(0.55, 'rgba(2,3,8,0.45)')
+    lado.addColorStop(1, 'rgba(2,3,8,0)')
+    g.fillStyle = lado
+    g.fillRect(0, 0, ancho, alto)
+    const x = 64
+    g.textBaseline = 'alphabetic'
+    g.fillStyle = '#ffb648'
+    g.font = '700 22px Rajdhani'
+    g.letterSpacing = '8px'
+    g.fillText('UNIVERSO FNOVA', x, 222)
+    const oro = g.createLinearGradient(0, 240, 0, 400)
+    oro.addColorStop(0, '#fff3dc')
+    oro.addColorStop(0.5, '#f2c27e')
+    oro.addColorStop(1, '#c26a2e')
+    g.fillStyle = oro
+    g.font = '800 82px Cinzel'
+    g.letterSpacing = '3px'
+    g.shadowColor = 'rgba(255,120,40,0.45)'
+    g.shadowBlur = 24
+    g.fillText('ECOS DE LA', x, 310)
+    g.fillText('QUEMA', x, 400)
+    g.shadowBlur = 0
+    g.fillStyle = '#a9d6ff'
+    g.font = '700 26px Rajdhani'
+    g.letterSpacing = '16px'
+    g.fillText('FLOTAS', x + 4, 448)
+    g.fillStyle = '#efe3cf'
+    g.font = '600 24px Rajdhani'
+    g.letterSpacing = '1px'
+    g.fillText('Batallas espaciales en 3D, en tiempo real.', x, 500)
+    g.fillStyle = '#c8b9a2'
+    g.fillText('Jugá gratis desde el navegador.', x, 532)
+    const blob = await new Promise((ok) => lienzo.toBlob(ok, 'image/jpeg', 0.86))
+    await fetch(`/__captura/${nombre}`, { method: 'POST', body: blob })
+    return blob.size
+  },
   simular(segundos) {
     const p = partida
     if (!p) return
