@@ -4,7 +4,7 @@
 //   A: atacar · S: detener · F: enfocar · Z X C V: formación · T: táctica
 import * as THREE from 'three'
 import { JUGADOR } from './sim/batalla.js'
-import { TACTICAS } from './datos.js'
+import { TACTICAS, FORMACIONES, TECLAS_FORMACION, formacionesPara } from './datos.js'
 import { ES_TACTIL } from './tactil.js'
 
 const ORDEN_TACTICAS = Object.keys(TACTICAS)
@@ -346,17 +346,17 @@ export class Entrada {
         this.enfocar(true)
         break
       case 'z':
-        this.comando({ formacion: 'delta' })
-        break
       case 'x':
-        this.comando({ formacion: 'muro' })
-        break
       case 'c':
-        this.comando({ formacion: 'esfera' })
-        break
       case 'v':
-        this.comando({ formacion: 'garra' })
+      case 'b':
+      case 'n':
+      case 'g': {
+        // Las teclas siguen el orden del panel, que depende de lo seleccionado.
+        const f = formacionesPara(sel)[TECLAS_FORMACION.indexOf(k)]
+        if (f) this.comando({ formacion: f })
         break
+      }
       case 't': {
         if (!sel.length) break
         const i = ORDEN_TACTICAS.indexOf(sel[0].tactica)
@@ -378,7 +378,7 @@ export class Entrada {
     if (cmd === 'enfocar') this.enfocar(true)
     if (formacion && sel.length) {
       this.batalla.cambiarFormacion(sel, formacion)
-      this.alAviso(`Formación ${formacion}`, 1)
+      this.alAviso(`${FORMACIONES[formacion].nombre}: ${FORMACIONES[formacion].efecto}`, 3)
     }
     if (tactica && sel.length) {
       this.batalla.cambiarTactica(sel, tactica)

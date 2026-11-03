@@ -21,9 +21,9 @@ const _a = new THREE.Vector3()
 const _b = new THREE.Vector3()
 
 const CONFIG = {
-  facil: { retirada: false, escolta: false, flanqueo: false, concentrar: false },
-  normal: { retirada: true, escolta: true, flanqueo: false, concentrar: true },
-  dificil: { retirada: true, escolta: true, flanqueo: true, concentrar: true },
+  facil: { retirada: false, escolta: false, flanqueo: false, concentrar: false, formaciones: false },
+  normal: { retirada: true, escolta: true, flanqueo: false, concentrar: true, formaciones: true },
+  dificil: { retirada: true, escolta: true, flanqueo: true, concentrar: true, formaciones: true },
 }
 
 export class ComandanteIA {
@@ -97,6 +97,7 @@ export class ComandanteIA {
       return
     }
 
+    if (this.tactica.formaciones) for (const p of propios) this.elegirFormacion(p)
     const capitales = propios.filter((p) => p.tipo.clase === 'capital')
     if (this.enMarcha(propios, capitales, visibles)) return
     const bombarderos = propios.filter((p) => p.tipo.clave === 'bombardero')
@@ -124,6 +125,7 @@ export class ComandanteIA {
         if (p.orden.objetivo !== peor) b.ordenarAtacar([p], peor)
         continue
       }
+      if (p.formacion === 'pantalla' && p.orden.tipo !== 'atacar') continue
       if (rol === 'escolta' && capitales.length && p.orden.tipo !== 'atacar') {
         // Sin amenazas, se queda cerca de su capital.
         const c = capitales[0].centro(_a)
@@ -138,6 +140,17 @@ export class ComandanteIA {
     }
   }
 
+  // Cada nave en la formación que le sirve; también los que llegan después.
+  elegirFormacion(p) {
+    if (p.formacionIA) return
+    p.formacionIA = true
+    const k = p.tipo.clave
+    if (p.tipo.clase === 'capital') p.formacion = 'linea'
+    else if (k === 'bombardero') p.formacion = 'caja'
+    else if (k === 'corbeta') p.formacion = 'cuna'
+    else p.formacion = this.roles.get(p) === 'escolta' ? 'pantalla' : 'tijera'
+  }
+
   // Avance en bloque: con capitales en la flota, nadie se suelta hasta que el
   // enemigo está cerca de la línea o alguien ya está peleando.
   enMarcha(propios, capitales, visibles) {
@@ -149,7 +162,7 @@ export class ComandanteIA {
       return false
     }
     const destino = this.prioridad[0]?.centro() ?? this.centroDe(visibles)
-    this.batalla.ordenarMover(propios, destino, 'garra')
+    this.batalla.ordenarMover(propios, destino)
     return true
   }
 
@@ -157,7 +170,7 @@ export class ComandanteIA {
     const destino = this.prioridad[0]?.centro() ?? this.ultimaPosicionRival ?? new THREE.Vector3(0, 0, 900 * this.frente)
     const linea = lista.filter((p) => this.roles.get(p) !== 'flanco' || p.flanco === 'hecho')
     const flancos = lista.filter((p) => this.roles.get(p) === 'flanco' && p.flanco !== 'hecho')
-    if (linea.length) this.batalla.ordenarMover(linea, destino.clone(), 'garra')
+    if (linea.length) this.batalla.ordenarMover(linea, destino.clone())
     for (const f of flancos) this.flanquear(f)
   }
 

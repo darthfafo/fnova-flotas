@@ -2,7 +2,7 @@
 // capa 2D encima del 3D (corchetes de selección, barras de vida, íconos
 // tácticos de lejos, recuadro de selección y el disco de movimiento).
 import * as THREE from 'three'
-import { FACCIONES, FORMACIONES, TACTICAS, TIPOS, ORDEN_TIPOS } from '../datos.js'
+import { FACCIONES, FORMACIONES, TACTICAS, TIPOS, ORDEN_TIPOS, TECLAS_FORMACION, formacionesPara } from '../datos.js'
 import { JUGADOR, ENEMIGO } from '../sim/batalla.js'
 import { Minimapa } from './minimapa.js'
 
@@ -138,6 +138,9 @@ export class Hud {
         <div class="barras" style="margin-top:8px"><div class="es"><i id="sel-es"></i></div><div class="et"><i id="sel-et"></i></div></div>`
     }
     // Botones activos según la selección.
+    $('#hud-formaciones').innerHTML = formacionesPara(sel)
+      .map((k, i) => `<button class="btn comando" data-formacion="${k}" title="${FORMACIONES[k].efecto}"><b>${TECLAS_FORMACION[i]?.toUpperCase() ?? '·'}</b>${FORMACIONES[k].nombre}</button>`)
+      .join('')
     const f = sel[0]?.formacion
     const t = sel[0]?.tactica
     for (const b of document.querySelectorAll('[data-formacion]')) b.classList.toggle('activo', b.dataset.formacion === f)

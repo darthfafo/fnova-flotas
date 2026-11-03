@@ -13,7 +13,7 @@
 import * as THREE from 'three'
 import { Batalla, JUGADOR, ENEMIGO } from '../sim/batalla.js'
 import { Terreno } from '../sim/terreno.js'
-import { FACCIONES, PROYECTIL } from '../datos.js'
+import { FACCIONES, PROYECTIL, puedeFormar } from '../datos.js'
 
 const ENVIOS_POR_SEGUNDO = 10
 const GIRO = new THREE.Quaternion(0, 1, 0, 0) // 180° sobre el eje Y
@@ -158,7 +158,7 @@ export class BatallaRemota extends Batalla {
   }
 
   cambiarFormacion(batallones, formacion) {
-    for (const b of batallones) b.formacion = formacion
+    for (const b of batallones) if (puedeFormar(b.tipo.clave, formacion)) b.formacion = formacion
     this.canal.enviar('orden', { t: 'formacion', b: this.indices(batallones), f: formacion })
   }
 

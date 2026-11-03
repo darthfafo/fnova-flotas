@@ -229,11 +229,28 @@ export function multiplicadorDaño(tipoAtacante, tipoObjetivo) {
   return (t.ventajaGeneral ?? 1) * (t.ventaja?.[tipoObjetivo] ?? 1)
 }
 
+// Cada formación tiene un efecto en combate (ver Batalla.dañoCausado y
+// dañoRecibido) y solo la pueden usar ciertas naves. En el panel y en las
+// teclas Z X C V B aparecen las que sirven para lo seleccionado.
 export const FORMACIONES = {
-  delta: { nombre: 'Delta', tecla: 'Z' },
-  muro: { nombre: 'Muro', tecla: 'X' },
-  esfera: { nombre: 'Esfera', tecla: 'C' },
-  garra: { nombre: 'Garra', tecla: 'V' },
+  delta: { nombre: 'Delta', efecto: 'Para viajar: sin ventajas ni costos.' },
+  linea: { nombre: 'Línea', tipos: ['crucero', 'portanaves', 'acorazado'], efecto: '+10% de daño de costado, pero las naves chicas le hacen +10% por proa y popa.' },
+  cuna: { nombre: 'Cuña', tipos: ['caza', 'corbeta'], efecto: '+20% de velocidad hasta el contacto y +10% de daño los primeros 8 segundos. Recibe +5% de daño.' },
+  caja: { nombre: 'Caja', tipos: ['bombardero'], efecto: 'Se cubren entre sí: −12% de daño de Cazas y Corbetas. −15% de velocidad.' },
+  pantalla: { nombre: 'Pantalla', tipos: ['caza', 'corbeta'], efecto: 'Rodean a la capital más cercana y atacan lo que se le acerque. No persiguen.' },
+  tijera: { nombre: 'Tijera', tipos: ['caza'], efecto: '−8% de impactos recibidos y +10% contra quien persigue a un aliado. −7% al resto, −20% contra capitales y −15% de velocidad.' },
+  pinza: { nombre: 'Pinza', tipos: ['caza', 'corbeta', 'bombardero'], efecto: 'Dos batallones rodean al blanco: +15% de daño cuando lo atacan desde lados distintos.' },
+}
+export const TECLAS_FORMACION = ['z', 'x', 'c', 'v', 'b', 'n', 'g']
+
+export function puedeFormar(tipo, formacion) {
+  const t = FORMACIONES[formacion]?.tipos
+  return !!FORMACIONES[formacion] && (!t || t.includes(tipo))
+}
+
+// Las formaciones que sirven para al menos uno de estos batallones.
+export function formacionesPara(batallones) {
+  return Object.keys(FORMACIONES).filter((f) => !batallones.length ? f === 'delta' : batallones.some((b) => puedeFormar(b.tipo.clave, f)))
 }
 
 export const TACTICAS = {

@@ -2,7 +2,7 @@
 // combate. No dibuja nada: expone el estado y emite eventos (disparo,
 // impacto, destrucción) que el motor convierte en efectos.
 import * as THREE from 'three'
-import { TIPOS, PUNTERIA, PROYECTIL, TACTICAS, CAPITAL, multiplicadorDaño, FACCIONES } from '../datos.js'
+import { TIPOS, PUNTERIA, PROYECTIL, TACTICAS, CAPITAL, multiplicadorDaño, FACCIONES, puedeFormar } from '../datos.js'
 import { Terreno } from './terreno.js'
 
 const Z = new THREE.Vector3(0, 0, 1)
@@ -14,6 +14,9 @@ const _q = new THREE.Quaternion()
 const _u = new THREE.Vector3()
 const _dirQ = new THREE.Vector3()
 const ORIGEN = new THREE.Vector3()
+const _l = new THREE.Vector3()
+const _c = new THREE.Vector3()
+const _lq = new THREE.Quaternion()
 
 export const JUGADOR = 0
 export const ENEMIGO = 1
@@ -126,24 +129,27 @@ export function slotsFormacion(formacion, n, esp) {
       const lado = i % 2 ? -1 : 1
       r.push(new THREE.Vector3(lado * fila * esp, (fila % 2) * esp * 0.15, -fila * esp * 0.9))
     }
-  } else if (formacion === 'muro') {
-    const cols = Math.ceil(Math.sqrt(n * 2))
-    const filas = Math.ceil(n / cols)
-    for (let i = 0; i < n; i++) {
-      const c = i % cols
-      const f = Math.floor(i / cols)
-      r.push(new THREE.Vector3((c - (cols - 1) / 2) * esp, ((filas - 1) / 2 - f) * esp * 0.8, 0))
+  } else if (formacion === 'linea') {
+    // En columna: así todas muestran la banda al enemigo que tienen al costado.
+    for (let i = 0; i < n; i++) r.push(new THREE.Vector3(0, 0, ((n - 1) / 2 - i) * esp))
+  } else if (formacion === 'cuna') {
+    r.push(new THREE.Vector3(0, 0, 0))
+    for (let i = 1; i < n; i++) {
+      const fila = Math.ceil(i / 2)
+      r.push(new THREE.Vector3((i % 2 ? -1 : 1) * fila * esp * 0.6, 0, -fila * esp * 0.75))
     }
-  } else if (formacion === 'esfera') {
-    const R = Math.max(esp, (esp * Math.sqrt(n)) / 1.6)
+  } else if (formacion === 'caja') {
+    // Escalonada en altura, como las cajas de bombarderos.
+    for (let i = 0; i < n; i++) r.push(new THREE.Vector3((i % 2 ? -0.5 : 0.5) * esp, (Math.floor(i / 2) % 2 ? 0.4 : -0.4) * esp, -Math.floor(i / 2) * esp * 0.6))
+  } else if (formacion === 'pantalla') {
+    const R = esp * Math.max(1, n / 3)
     for (let i = 0; i < n; i++) {
-      // Espiral de Fibonacci: puntos parejos sobre la esfera.
-      const y = 1 - (2 * (i + 0.5)) / n
-      const rr = Math.sqrt(1 - y * y)
-      const th = i * 2.399963
-      r.push(new THREE.Vector3(Math.cos(th) * rr * R, y * R * 0.7, Math.sin(th) * rr * R))
+      const a = (i / n) * Math.PI * 2
+      r.push(new THREE.Vector3(Math.cos(a) * R, Math.sin(a) * R, 0))
     }
-  } else if (formacion === 'garra') {
+  } else if (formacion === 'tijera') {
+    for (let i = 0; i < n; i++) r.push(new THREE.Vector3((i % 2 ? -0.8 : 0.8) * esp, 0, -Math.floor(i / 2) * esp))
+  } else if (formacion === 'pinza') {
     const arco = Math.PI * 0.9
     const R = Math.max(esp * 1.2, (esp * n) / arco)
     for (let i = 0; i < n; i++) {
@@ -271,7 +277,9 @@ export class Batalla {
     rumbo.normalize()
     const q = quatHacia(rumbo)
     const esp = Math.max(...batallones.map((b) => radioBatallon(b, this))) * 2.4
-    const slots = slotsFormacion(formacion ?? batallones[0].formacion, batallones.length, esp)
+    // Un grupo mezclado viaja en Delta; cada batallón conserva su formación.
+    const f0 = batallones[0].formacion
+    const slots = slotsFormacion(formacion ?? (batallones.every((b) => b.formacion === f0) ? f0 : 'delta'), batallones.length, esp)
     // El más lento marca el ritmo (como un grupo de ataque de Homeworld).
     const tope = batallones.length > 1 ? Math.min(...batallones.map((b) => b.naves[0].velocidadMax)) : Infinity
     // Los más pesados al centro de la formación.
@@ -279,10 +287,11 @@ export class Batalla {
     ordenados.forEach((b, i) => {
       b.orden = { tipo: 'mover' }
       b.libre = true // una escuadrilla movida a mano deja de escoltar
+      b.contacto = undefined // la Cuña vuelve a tener su primer golpe
       b.destino.copy(slots[i]).applyQuaternion(q).add(punto)
       b.rumbo.copy(rumbo)
       b.topeVelocidad = tope
-      if (formacion) b.formacion = formacion
+      if (formacion && puedeFormar(b.tipo.clave, formacion)) b.formacion = formacion
       for (const n of b.naves) n.objetivo = null
     })
   }
@@ -290,7 +299,8 @@ export class Batalla {
   ordenarAtacar(batallones, objetivo) {
     for (const b of batallones) {
       if (b.equipo === objetivo.equipo) continue
-      b.orden = { tipo: 'atacar', objetivo }
+      b.orden = { tipo: 'atacar', objetivo, desde: this.tiempo }
+      b.pinzaCerrada = false
       b.topeVelocidad = Infinity
       for (const n of b.naves) n.objetivo = null
     }
@@ -309,8 +319,14 @@ export class Batalla {
     for (const b of batallones) b.tactica = tactica
   }
 
-  cambiarFormacion(batallones, formacion) {
-    for (const b of batallones) b.formacion = formacion
+  // Solo cambian los batallones que pueden usarla. En Pinza se reparten en dos alas.
+  cambiarFormacion(todos, formacion) {
+    const batallones = todos.filter((b) => puedeFormar(b.tipo.clave, formacion))
+    if (!batallones.length) return
+    batallones.forEach((b, i) => {
+      b.formacion = formacion
+      b.ala = i % 2 ? -1 : 1
+    })
     if (batallones.every((b) => b.orden.tipo !== 'atacar')) {
       const centro = new THREE.Vector3()
       for (const b of batallones) centro.add(b.destino)
@@ -416,6 +432,115 @@ export class Batalla {
     return nave
   }
 
+  // --- Efectos de las formaciones (ver FORMACIONES en datos.js) -----------------
+
+  // Dónde cae un punto respecto de la nave: x a los costados, z proa y popa.
+  relativo(n, punto) {
+    return _l.copy(punto).sub(n.pos).applyQuaternion(_lq.copy(n.quat).invert())
+  }
+
+  factorVelocidad(b) {
+    // La Cuña acelera hasta el primer contacto; después pelea normal.
+    if (b.formacion === 'cuna') return b.contacto === undefined ? 1.2 : 1
+    return b.formacion === 'caja' || b.formacion === 'tijera' ? 0.85 : 1
+  }
+
+  dañoCausado(n, obj) {
+    const b = n.batallon
+    if (b.formacion === 'linea') {
+      const r = this.relativo(n, obj.pos)
+      return Math.abs(r.x) > Math.abs(r.z) ? 1.1 : 1
+    }
+    if (b.formacion === 'cuna') {
+      b.contacto ??= this.tiempo
+      return this.tiempo - b.contacto < 8 ? 1.1 : 1
+    }
+    if (b.formacion === 'tijera') {
+      if (obj.esCapital) return 0.8
+      return obj.objetivo?.equipo === n.equipo ? 1.1 : 0.93
+    }
+    if (b.formacion === 'pinza') return this.enPinza(b, obj) ? 1.15 : 1
+    return 1
+  }
+
+  // Otro batallón en Pinza ataca el mismo blanco desde un lado distinto.
+  enPinza(b, obj) {
+    const yo = _l.copy(b.centro(_c)).sub(obj.pos).normalize()
+    for (const x of this.batallones) {
+      if (x === b || x.equipo !== b.equipo || !x.viva || x.formacion !== 'pinza' || x.orden.objetivo !== obj.batallon) continue
+      if (yo.dot(x.centro(_c).sub(obj.pos).normalize()) < 0.5) return true
+    }
+    return false
+  }
+
+  dañoRecibido(o, autor) {
+    const b = o.batallon
+    if (b.formacion === 'linea') {
+      // Las naves chicas que entran por proa y popa escapan a las bandas.
+      if (autor.esCapital) return 1
+      const r = this.relativo(o, autor.pos)
+      return Math.abs(r.z) > Math.abs(r.x) * 2 ? 1.1 : 1
+    }
+    if (b.formacion === 'cuna') return 1.05
+    // La Caja se rompe si queda una sola nave.
+    if (b.formacion === 'caja' && b.vivas.length > 1 && ['caza', 'corbeta'].includes(autor.tipo.clave)) return 0.88
+    return 1
+  }
+
+  // Pantalla: anillo alrededor de la capital propia más cercana. Devuelve
+  // false si no hay capital (entonces pelea como cualquier batallón).
+  pantalla(b) {
+    if (b.orden.tipo === 'mover' || (b.orden.tipo === 'atacar' && !b.orden.automatico)) return true
+    const centro = b.centro(_c)
+    if (!b.custodia?.viva) {
+      b.custodia = null
+      let d = Infinity
+      for (const n of this.naves) {
+        if (!n.viva || !n.esCapital || n.equipo !== b.equipo) continue
+        const x = n.pos.distanceToSquared(centro)
+        if (x < d) ((d = x), (b.custodia = n))
+      }
+    }
+    const c = b.custodia
+    if (!c) return false
+    const a = b.id * 2.4
+    const r = c.radio + 120
+    b.destino.copy(c.pos).add(_l.set(Math.cos(a) * r, Math.sin(a * 1.7) * 50, Math.sin(a) * r))
+    b.rumbo.copy(c.adelante)
+    if (b.orden.tipo === 'atacar') {
+      if (b.orden.objetivo.centro(_l).distanceTo(c.pos) > 650) b.orden = { tipo: 'quieto' }
+      return true
+    }
+    let mejor = null
+    let dMejor = 520
+    for (const e of this.enemigosDe(b.equipo, true)) {
+      const d = e.centro(_l).distanceTo(c.pos)
+      if (d < dMejor) ((dMejor = d), (mejor = e))
+    }
+    if (mejor) b.orden = { tipo: 'atacar', objetivo: mejor, automatico: true }
+    return true
+  }
+
+  // Movimiento propio de la formación mientras ataca.
+  maniobraFormacion(n, b, destino) {
+    if (b.orden.tipo !== 'atacar') return
+    if (b.formacion === 'tijera') {
+      // Las dos mitades se cruzan una y otra vez.
+      const lado = _l.crossVectors(n.adelante, ARRIBA).normalize()
+      destino.addScaledVector(lado, Math.sin(this.tiempo * 1.8 + (n.id % 2) * Math.PI) * 35)
+    } else if (b.formacion === 'pinza' && b.ala && !b.pinzaCerrada) {
+      // Primero el rodeo hacia su ala; recién después se cierra sobre el blanco.
+      const blanco = b.orden.objetivo.centro(_c)
+      const hacia = _l.copy(blanco).sub(b.centro(new THREE.Vector3()))
+      const d = hacia.length()
+      if (d < 600 || this.tiempo - (b.orden.desde ?? 0) > 25) b.pinzaCerrada = true
+      else {
+        hacia.divideScalar(d)
+        destino.copy(blanco).addScaledVector(_u.crossVectors(hacia, ARRIBA).normalize(), b.ala * 520).addScaledVector(hacia, -150)
+      }
+    }
+  }
+
   pensarBatallon(b) {
     // Escuadrilla sin órdenes del comandante: escolta a su portanaves.
     if (b.escuadrilla && !b.libre && b.orden.tipo === 'quieto' && b.portanaves.viva) {
@@ -435,6 +560,7 @@ export class Batalla {
         b.destino.copy(b.centro(_v))
       } else b.orden.vistoEn ??= this.tiempo
     }
+    if (b.formacion === 'pantalla' && this.pantalla(b)) return
     // Adquisición automática según la táctica.
     if (b.orden.tipo === 'quieto' && !b.pieza) {
       const alcance = TACTICAS[b.tactica].alcanceDeteccion
@@ -478,7 +604,7 @@ export class Batalla {
     const b = n.batallon
     const t = n.tipo
     let destino = _v
-    let velDeseada = Math.min(n.velocidadMax, b.topeVelocidad)
+    let velDeseada = Math.min(n.velocidadMax * this.factorVelocidad(b), b.topeVelocidad)
     let llegar = true
 
     if (b.orden.tipo === 'atacar') {
@@ -535,6 +661,7 @@ export class Batalla {
       destino.x += Math.sin(f) * 40
       destino.y += Math.cos(f * 1.3) * 30
     }
+    this.maniobraFormacion(n, b, destino)
     const aDestino = _w.copy(destino).sub(n.pos)
     const dist = aDestino.length()
     if (llegar) {
@@ -793,8 +920,9 @@ export class Batalla {
     // La agilidad esquiva disparos apuntados, no la metralla del flak.
     if (arma.tipo !== 'flak') acierto *= obj.tipo.agilidad ?? 1
     if (!obj.esCapital && obj.batallon.tactica === 'evasiva') acierto *= 0.75
+    if (obj.batallon.formacion === 'tijera') acierto *= 0.92
     const impacta = Math.random() < acierto
-    const daño = arma.daño * n.factorDaño * multiplicadorDaño(n.tipo.clave, obj.tipo.clave) * (0.85 + Math.random() * 0.3)
+    const daño = arma.daño * n.factorDaño * multiplicadorDaño(n.tipo.clave, obj.tipo.clave) * this.dañoCausado(n, obj) * (0.85 + Math.random() * 0.3)
     const apunta = obj.pos.clone()
     // Flak contra naves chicas: no busca el impacto directo, estalla cerca
     // del blanco (más cerca si "acierta") y daña a todo lo que agarre.
@@ -908,9 +1036,10 @@ export class Batalla {
   impactar(p, o) {
     o.ultimoImpacto = this.tiempo
     o.batallon.atacadoEn = this.tiempo
-    this.estadisticas[p.autor.equipo].daño += p.daño
-    p.autor.batallon.dañoCausado += p.daño
-    let resto = p.daño
+    const daño = p.daño * this.dañoRecibido(o, p.autor)
+    this.estadisticas[p.autor.equipo].daño += daño
+    p.autor.batallon.dañoCausado += daño
+    let resto = daño
     const enEscudo = Math.min(o.escudo, resto)
     o.escudo -= enEscudo
     resto -= enEscudo

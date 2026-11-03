@@ -889,3 +889,7 @@ html.tactil .grupo-comandos:not(.solo-tactil):not(.solo-mover) .btn.comando b { 
   .hud-mision { width: 180px; top: 40px; font-size: 0.75rem; }
   .hud-transmision { top: 40px; font-size: 0.78rem; }
 }
+
+/* Formaciones: la cantidad cambia con la selección (hasta siete). */
+#hud-formaciones { flex-wrap: wrap; justify-content: center; }
+#hud-formaciones .btn.comando { min-width: 50px; padding-left: 5px; padding-right: 5px; }
