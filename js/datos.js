@@ -229,17 +229,17 @@ export function multiplicadorDaño(tipoAtacante, tipoObjetivo) {
   return (t.ventajaGeneral ?? 1) * (t.ventaja?.[tipoObjetivo] ?? 1)
 }
 
-// Cada formación tiene un efecto en combate (ver Batalla.dañoCausado y
-// dañoRecibido) y solo la pueden usar ciertas naves. En el panel y en las
-// teclas Z X C V B aparecen las que sirven para lo seleccionado.
+// Las formaciones no dan bonus: cambian cómo se acomodan y se mueven las naves,
+// y la ventaja sale de eso. Solo las pueden usar ciertas naves. En el panel y
+// en las teclas aparecen las que sirven para lo seleccionado.
 export const FORMACIONES = {
-  delta: { nombre: 'Delta', efecto: 'Para viajar: sin ventajas ni costos.' },
-  linea: { nombre: 'Línea', tipos: ['crucero', 'portanaves', 'acorazado'], efecto: '+10% de daño de costado, pero las naves chicas le hacen +10% por proa y popa.' },
-  cuna: { nombre: 'Cuña', tipos: ['caza', 'corbeta'], efecto: '+20% de velocidad hasta el contacto y +10% de daño los primeros 8 segundos. Recibe +5% de daño.' },
-  caja: { nombre: 'Caja', tipos: ['bombardero'], efecto: 'Se cubren entre sí: −12% de daño de Cazas y Corbetas. −15% de velocidad.' },
+  delta: { nombre: 'Delta', efecto: 'Para viajar. Al atacar, cada nave pelea por su cuenta.' },
+  linea: { nombre: 'Línea', tipos: ['crucero', 'portanaves', 'acorazado'], efecto: 'En columna y navegando para el mismo lado: todas muestran la banda. De frente llegan de a una.' },
+  cuna: { nombre: 'Cuña', tipos: ['caza', 'corbeta'], efecto: 'Llegan juntas al blanco y pegan a la vez. Apretadas, el flak las castiga más.' },
+  caja: { nombre: 'Caja', tipos: ['bombardero'], efecto: 'Avanzan escalonados y sueltan los torpedos juntos. Apretados son blanco fácil para el flak.' },
   pantalla: { nombre: 'Pantalla', tipos: ['caza', 'corbeta'], efecto: 'Rodean a la capital más cercana y atacan lo que se le acerque. No persiguen.' },
-  tijera: { nombre: 'Tijera', tipos: ['caza'], efecto: '−8% de impactos recibidos y +10% contra quien persigue a un aliado. −7% al resto, −20% contra capitales y −15% de velocidad.' },
-  pinza: { nombre: 'Pinza', tipos: ['caza', 'corbeta', 'bombardero'], efecto: 'Dos batallones rodean al blanco: +15% de daño cuando lo atacan desde lados distintos.' },
+  tijera: { nombre: 'Tijera', tipos: ['caza'], efecto: 'Se cruzan sin parar, difíciles de seguir, y atacan primero a quien persigue a un compañero.' },
+  pinza: { nombre: 'Pinza', tipos: ['caza', 'corbeta', 'bombardero'], efecto: 'Dos batallones dan un rodeo y entran por lados opuestos: el blanco no puede cubrir los dos.' },
 }
 export const TECLAS_FORMACION = ['z', 'x', 'c', 'v', 'b', 'n', 'g']
 

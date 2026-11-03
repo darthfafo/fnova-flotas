@@ -16,7 +16,6 @@ const _dirQ = new THREE.Vector3()
 const ORIGEN = new THREE.Vector3()
 const _l = new THREE.Vector3()
 const _c = new THREE.Vector3()
-const _lq = new THREE.Quaternion()
 
 export const JUGADOR = 0
 export const ENEMIGO = 1
@@ -287,7 +286,6 @@ export class Batalla {
     ordenados.forEach((b, i) => {
       b.orden = { tipo: 'mover' }
       b.libre = true // una escuadrilla movida a mano deja de escoltar
-      b.contacto = undefined // la Cuña vuelve a tener su primer golpe
       b.destino.copy(slots[i]).applyQuaternion(q).add(punto)
       b.rumbo.copy(rumbo)
       b.topeVelocidad = tope
@@ -301,6 +299,7 @@ export class Batalla {
       if (b.equipo === objetivo.equipo) continue
       b.orden = { tipo: 'atacar', objetivo, desde: this.tiempo }
       b.pinzaCerrada = false
+      b.enContacto = false
       b.topeVelocidad = Infinity
       for (const n of b.naves) n.objetivo = null
     }
@@ -432,60 +431,7 @@ export class Batalla {
     return nave
   }
 
-  // --- Efectos de las formaciones (ver FORMACIONES en datos.js) -----------------
-
-  // Dónde cae un punto respecto de la nave: x a los costados, z proa y popa.
-  relativo(n, punto) {
-    return _l.copy(punto).sub(n.pos).applyQuaternion(_lq.copy(n.quat).invert())
-  }
-
-  factorVelocidad(b) {
-    // La Cuña acelera hasta el primer contacto; después pelea normal.
-    if (b.formacion === 'cuna') return b.contacto === undefined ? 1.2 : 1
-    return b.formacion === 'caja' || b.formacion === 'tijera' ? 0.85 : 1
-  }
-
-  dañoCausado(n, obj) {
-    const b = n.batallon
-    if (b.formacion === 'linea') {
-      const r = this.relativo(n, obj.pos)
-      return Math.abs(r.x) > Math.abs(r.z) ? 1.1 : 1
-    }
-    if (b.formacion === 'cuna') {
-      b.contacto ??= this.tiempo
-      return this.tiempo - b.contacto < 8 ? 1.1 : 1
-    }
-    if (b.formacion === 'tijera') {
-      if (obj.esCapital) return 0.8
-      return obj.objetivo?.equipo === n.equipo ? 1.1 : 0.93
-    }
-    if (b.formacion === 'pinza') return this.enPinza(b, obj) ? 1.15 : 1
-    return 1
-  }
-
-  // Otro batallón en Pinza ataca el mismo blanco desde un lado distinto.
-  enPinza(b, obj) {
-    const yo = _l.copy(b.centro(_c)).sub(obj.pos).normalize()
-    for (const x of this.batallones) {
-      if (x === b || x.equipo !== b.equipo || !x.viva || x.formacion !== 'pinza' || x.orden.objetivo !== obj.batallon) continue
-      if (yo.dot(x.centro(_c).sub(obj.pos).normalize()) < 0.5) return true
-    }
-    return false
-  }
-
-  dañoRecibido(o, autor) {
-    const b = o.batallon
-    if (b.formacion === 'linea') {
-      // Las naves chicas que entran por proa y popa escapan a las bandas.
-      if (autor.esCapital) return 1
-      const r = this.relativo(o, autor.pos)
-      return Math.abs(r.z) > Math.abs(r.x) * 2 ? 1.1 : 1
-    }
-    if (b.formacion === 'cuna') return 1.05
-    // La Caja se rompe si queda una sola nave.
-    if (b.formacion === 'caja' && b.vivas.length > 1 && ['caza', 'corbeta'].includes(autor.tipo.clave)) return 0.88
-    return 1
-  }
+  // --- Formaciones: no dan bonus; cambian dónde está cada nave ------------------
 
   // Pantalla: anillo alrededor de la capital propia más cercana. Devuelve
   // false si no hay capital (entonces pelea como cualquier batallón).
@@ -524,7 +470,23 @@ export class Batalla {
   // Movimiento propio de la formación mientras ataca.
   maniobraFormacion(n, b, destino) {
     if (b.orden.tipo !== 'atacar') return
-    if (b.formacion === 'tijera') {
+    if (b.formacion === 'cuna' || b.formacion === 'caja') {
+      // Llegan juntos: mantienen sus puestos hasta tener el blanco a tiro.
+      // Pegan a la vez, pero apretados son mejor blanco para el flak.
+      if (b.enContacto) return
+      const blanco = b.orden.objetivo.centro(_c)
+      const centro = b.centro(new THREE.Vector3())
+      const hacia = _l.copy(blanco).sub(centro)
+      const d = hacia.length()
+      if (d < n.tipo.armas[0].alcance + 120) {
+        b.enContacto = true
+        return
+      }
+      hacia.divideScalar(d)
+      const vivas = b.vivas
+      const slots = slotsFormacion(b.formacion, vivas.length, n.radio * 2.2)
+      destino.copy(slots[vivas.indexOf(n)]).applyQuaternion(quatHacia(hacia, _q)).add(centro).addScaledVector(hacia, 160)
+    } else if (b.formacion === 'tijera') {
       // Las dos mitades se cruzan una y otra vez.
       const lado = _l.crossVectors(n.adelante, ARRIBA).normalize()
       destino.addScaledVector(lado, Math.sin(this.tiempo * 1.8 + (n.id % 2) * Math.PI) * 35)
@@ -590,7 +552,9 @@ export class Batalla {
     let puntaje = Infinity
     for (const o of ob.naves) {
       if (!o.viva || !this.esVisible(n.equipo, o)) continue
-      const s = o.pos.distanceTo(n.pos) * (0.7 + Math.random() * 0.6)
+      let s = o.pos.distanceTo(n.pos) * (0.7 + Math.random() * 0.6)
+      // Tijera: primero se saca de encima a quien persigue a su compañero.
+      if (b.formacion === 'tijera' && o.objetivo?.batallon === b) s *= 0.4
       if (s < puntaje) {
         puntaje = s
         mejor = o
@@ -604,7 +568,7 @@ export class Batalla {
     const b = n.batallon
     const t = n.tipo
     let destino = _v
-    let velDeseada = Math.min(n.velocidadMax * this.factorVelocidad(b), b.topeVelocidad)
+    let velDeseada = Math.min(n.velocidadMax, b.topeVelocidad)
     let llegar = true
 
     if (b.orden.tipo === 'atacar') {
@@ -622,7 +586,8 @@ export class Batalla {
           if (dist > alcance * 0.95) destino.copy(obj.pos)
           else {
             const radial = _w.copy(obj.pos).sub(n.pos).divideScalar(dist)
-            const lado = n.ladoAndanada ?? (n.ladoAndanada = Math.random() < 0.5 ? 1 : -1)
+            // En Línea todas navegan para el mismo lado, una detrás de la otra.
+            const lado = b.formacion === 'linea' ? 1 : (n.ladoAndanada ??= Math.random() < 0.5 ? 1 : -1)
             const tangente = _u.crossVectors(radial, ARRIBA).normalize().multiplyScalar(lado)
             destino
               .copy(n.pos)
@@ -920,9 +885,8 @@ export class Batalla {
     // La agilidad esquiva disparos apuntados, no la metralla del flak.
     if (arma.tipo !== 'flak') acierto *= obj.tipo.agilidad ?? 1
     if (!obj.esCapital && obj.batallon.tactica === 'evasiva') acierto *= 0.75
-    if (obj.batallon.formacion === 'tijera') acierto *= 0.92
     const impacta = Math.random() < acierto
-    const daño = arma.daño * n.factorDaño * multiplicadorDaño(n.tipo.clave, obj.tipo.clave) * this.dañoCausado(n, obj) * (0.85 + Math.random() * 0.3)
+    const daño = arma.daño * n.factorDaño * multiplicadorDaño(n.tipo.clave, obj.tipo.clave) * (0.85 + Math.random() * 0.3)
     const apunta = obj.pos.clone()
     // Flak contra naves chicas: no busca el impacto directo, estalla cerca
     // del blanco (más cerca si "acierta") y daña a todo lo que agarre.
@@ -1036,10 +1000,9 @@ export class Batalla {
   impactar(p, o) {
     o.ultimoImpacto = this.tiempo
     o.batallon.atacadoEn = this.tiempo
-    const daño = p.daño * this.dañoRecibido(o, p.autor)
-    this.estadisticas[p.autor.equipo].daño += daño
-    p.autor.batallon.dañoCausado += daño
-    let resto = daño
+    this.estadisticas[p.autor.equipo].daño += p.daño
+    p.autor.batallon.dañoCausado += p.daño
+    let resto = p.daño
     const enEscudo = Math.min(o.escudo, resto)
     o.escudo -= enEscudo
     resto -= enEscudo
