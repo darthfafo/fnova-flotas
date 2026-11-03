@@ -52,7 +52,8 @@ export async function cargarModelos(alProgresar) {
       const base = cargados[nombre]
       const geo = base.geometry.clone()
       geo.computeBoundingBox()
-      const bb = geo.boundingBox
+      // Copia: translate() y scale() recalculan geo.boundingBox en el mismo objeto.
+      const bb = geo.boundingBox.clone()
       const centro = bb.getCenter(new THREE.Vector3())
       geo.translate(-centro.x, -centro.y, -centro.z)
       const largo = bb.max.z - bb.min.z

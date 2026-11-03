@@ -6,7 +6,11 @@
 //     lo que se les acerque (sobre todo Bombarderos).
 //   · Flanqueo: en Difícil, los batallones rápidos dan un rodeo amplio y
 //     entran por el costado mientras el grueso avanza de frente.
-//   · Blancos: busca las contras, remata heridos y concentra el fuego.
+//   · Marcha: la flota avanza junta hasta hacer contacto; las naves chicas
+//     no se adelantan solas a morir contra el enemigo entero.
+//   · Blancos: busca las contras, remata heridos y concentra el fuego. Cazas
+//     y Corbetas no se tiran contra el flak mientras haya naves chicas que
+//     cazar, y cuidan a los Bombarderos propios.
 // Solo conoce lo que tiene en sus sensores: si te escondés en una nebulosa
 // avanza hacia donde te vio por última vez.
 import * as THREE from 'three'
@@ -38,6 +42,7 @@ export class ComandanteIA {
     this.ultimaPosicionRival = null
     this.roles = new Map() // batallón → 'linea' | 'escolta' | 'flanco'
     this.prioridad = [] // campaña: batallones que hay que atacar primero
+    this.marcha = 50 // segundos, como mucho, de avance en bloque antes de soltarse
   }
 
   propios() {
@@ -68,6 +73,7 @@ export class ComandanteIA {
     if (this.esperando) return
     const b = this.batalla
     this.reloj -= dt
+    this.marcha -= dt
     if (this.reloj > 0) return
     this.reloj = this.config.reaccion * (0.8 + Math.random() * 0.4)
 
@@ -92,7 +98,9 @@ export class ComandanteIA {
     }
 
     const capitales = propios.filter((p) => p.tipo.clase === 'capital')
-    const amenazas = this.amenazasA(capitales, visibles)
+    if (this.enMarcha(propios, capitales, visibles)) return
+    const bombarderos = propios.filter((p) => p.tipo.clave === 'bombardero')
+    const amenazas = this.amenazasA([...capitales, ...bombarderos], visibles)
 
     for (const p of propios) {
       if (this.tactica.retirada && this.gestionarRetirada(p, capitales)) continue
@@ -130,6 +138,21 @@ export class ComandanteIA {
     }
   }
 
+  // Avance en bloque: con capitales en la flota, nadie se suelta hasta que el
+  // enemigo está cerca de la línea o alguien ya está peleando.
+  enMarcha(propios, capitales, visibles) {
+    if (this.marcha <= 0 || !capitales.length) return false
+    const centro = this.centroDe(capitales)
+    const contacto = visibles.some((v) => v.centro(_b).distanceTo(centro) < 750) || propios.some((p) => this.batalla.tiempo - p.atacadoEn < 3)
+    if (contacto) {
+      this.marcha = 0
+      return false
+    }
+    const destino = this.prioridad[0]?.centro() ?? this.centroDe(visibles)
+    this.batalla.ordenarMover(propios, destino, 'garra')
+    return true
+  }
+
   avanzar(lista) {
     const destino = this.prioridad[0]?.centro() ?? this.ultimaPosicionRival ?? new THREE.Vector3(0, 0, 900 * this.frente)
     const linea = lista.filter((p) => this.roles.get(p) !== 'flanco' || p.flanco === 'hecho')
@@ -161,12 +184,10 @@ export class ComandanteIA {
       }
       return true
     }
-    // Las capitales no se retiran si no hay a dónde: pelean hasta el final.
-    if (salud.estructura > umbral || (p.tipo.clase === 'capital' && capitales.length <= 1)) return false
+    // Sin una capital donde repararse no hay a dónde ir: se pelea hasta el final.
     const refugio = capitales.find((c) => c !== p)
-    const punto = refugio
-      ? refugio.centro(_a).clone().add(new THREE.Vector3(0, 80, -150 * this.frente))
-      : p.centro(_a).clone().add(new THREE.Vector3(0, 0, -900 * this.frente))
+    if (salud.estructura > umbral || !refugio) return false
+    const punto = refugio.centro(_a).clone().add(new THREE.Vector3(0, 80, -150 * this.frente))
     this.batalla.ordenarMover([p], punto)
     p.tactica = 'evasiva'
     p.retirada = true
@@ -191,6 +212,9 @@ export class ComandanteIA {
     const c = p.centro(_a).clone()
     let mejor = null
     let puntaje = -Infinity
+    // Cazas y Corbetas contra una capital solo cuando no queda nada chico.
+    const cazador = p.tipo.clase !== 'capital' && p.tipo.clave !== 'bombardero'
+    const quedanChicas = visibles.some((r) => r.tipo.clase !== 'capital')
     for (const r of visibles) {
       const d = r.centro(_b).distanceTo(c)
       let s = -d / 400
@@ -198,11 +222,12 @@ export class ComandanteIA {
         s += (multiplicadorDaño(p.tipo.clave, r.tipo.clave) - 1) * 4
         s -= (multiplicadorDaño(r.tipo.clave, p.tipo.clave) - 1) * 1.5
         s += (1 - r.salud().estructura) * 1.5 // rematar heridos
+        if (cazador && quedanChicas && r.tipo.clase === 'capital') s -= 2.5
       }
       if (this.tactica.concentrar) {
         // Concentrar el fuego: suma si otros batallones propios ya le tiran.
         const aliados = this.batalla.batallones.filter((x) => x.equipo === this.equipo && x.viva && x.orden.objetivo === r).length
-        s += Math.min(aliados, 3) * 0.5
+        s += Math.min(aliados, 3) * 0.8
         if (amenazas.includes(r)) s += 1.5
       }
       if (this.prioridad.includes(r)) s += 2.5

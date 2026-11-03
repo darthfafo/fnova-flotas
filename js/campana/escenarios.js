@@ -337,7 +337,7 @@ export const ESCENARIOS = [
     },
     inquisidores: {
       resumen: 'La Mente sobrevivió y no se deja controlar. Derribá sus repetidores y sostené el enlace para someterla.',
-      jugador: { flota: { caza: 4, corbeta: 3, bombardero: 3, crucero: 3, portanaves: 1, acorazado: 1 }, pos: [0, 0, 760] },
+      jugador: { flota: { caza: 4, corbeta: 3, bombardero: 4, crucero: 3, portanaves: 1, acorazado: 2 }, pos: [0, 0, 760] },
       enemigo: { flota: { caza: 5, corbeta: 3, bombardero: 2, crucero: 3, acorazado: 1 }, pos: [0, 0, -180] },
       piezas: [...REPETIDORES, MENTE],
       objetivos: [
