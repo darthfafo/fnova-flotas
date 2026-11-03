@@ -74,6 +74,8 @@
     <div class="pie-portada" id="pie-portada" hidden>
       <button class="enlace" data-accion="prologo">Ver el prólogo</button>
       <span>·</span>
+      <button class="enlace" data-accion="atlas">Atlas de naves</button>
+      <span>·</span>
       <button class="enlace" data-accion="controles">Controles</button>
       <span>·</span>
       <button class="enlace" data-accion="creditos">Créditos</button>
@@ -233,6 +235,19 @@
     <div class="campana-cuerpo">
       <div class="panel campana-mapa" id="campana-mapa"></div>
       <div class="panel campana-detalle" id="campana-detalle"></div>
+    </div>
+  </section>
+
+  <section id="pantalla-atlas" class="pantalla pantalla-atlas">
+    <header class="armado-cab">
+      <button class="btn chico" data-accion="volver-titulo">‹ Inicio</button>
+      <h2>Atlas de naves</h2>
+      <div class="campana-ordenes" id="atlas-pestañas"></div>
+    </header>
+    <div class="atlas-cuerpo">
+      <div class="panel atlas-lista" id="atlas-lista"></div>
+      <div class="panel atlas-visor"><canvas id="atlas-visor"></canvas><small>Arrastrá para girar</small></div>
+      <div class="panel atlas-ficha" id="atlas-ficha"></div>
     </div>
   </section>
 

@@ -9,6 +9,7 @@ import { Sonido } from './motor/sonido.js'
 import { Mision } from './sim/mision.js'
 import { Campana, PanelMision } from './ui/campana.js'
 import { Cinematica } from './ui/cinematica.js'
+import { Atlas } from './ui/atlas.js'
 import { Musica } from './motor/musica.js'
 import { Intro } from './ui/intro.js'
 import { Batalla, JUGADOR, ENEMIGO } from './sim/batalla.js'
@@ -86,6 +87,8 @@ const campana = new Campana({
   faccionFija: () => cuenta.perfil?.faccion ?? null,
   alJugar: (def, faccion) => iniciarBatalla({ ...menus.config, faccion, dificultad: 'normal', mapa: def.mapa, flota: def.jugador.flota, presupuesto: 0 }, { mision: def }),
 })
+
+new Atlas({ descubierto: () => Math.max(campana.ganados('guardianes'), campana.ganados('inquisidores')) })
 
 const multijugador = new Multijugador({
   menus,

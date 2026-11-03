@@ -893,3 +893,44 @@ html.tactil .grupo-comandos:not(.solo-tactil):not(.solo-mover) .btn.comando b { 
 /* Formaciones: la cantidad cambia con la selección (hasta siete). */
 #hud-formaciones { flex-wrap: wrap; justify-content: center; }
 #hud-formaciones .btn.comando { min-width: 50px; padding-left: 5px; padding-right: 5px; }
+
+/* --- Atlas de naves ------------------------------------------------------ */
+.pantalla-atlas.visible { flex-direction: column; justify-content: flex-start; gap: 12px; padding: 48px 24px 20px; }
+.pantalla-atlas .armado-cab { width: min(1240px, 100%); }
+.atlas-cuerpo { flex: 1; min-height: 0; width: min(1240px, 100%); display: grid; grid-template-columns: 190px 1fr 340px; gap: 12px; }
+.atlas-lista { display: flex; flex-direction: column; gap: 4px; padding: 8px; overflow-y: auto; }
+.atlas-item {
+  background: none; border: 1px solid transparent; color: var(--texto); font: inherit; font-weight: 600; text-align: left;
+  padding: 8px 10px; cursor: pointer; display: flex; flex-direction: column; letter-spacing: 0.04em;
+}
+.atlas-item small { color: var(--texto-tenue); font-weight: 400; font-size: 0.72rem; }
+.atlas-item:hover:not(:disabled) { border-color: var(--borde); }
+.atlas-item.elegido { border-color: var(--acento); background: rgba(120, 170, 220, 0.1); }
+.atlas-item:disabled { opacity: 0.4; cursor: default; }
+.atlas-visor {
+  position: relative; min-height: 0; overflow: hidden;
+  background: radial-gradient(ellipse at 50% 55%, rgba(90, 130, 190, 0.2), transparent 65%), rgba(6, 10, 18, 0.7);
+}
+.atlas-visor canvas { position: absolute; inset: 0; width: 100%; height: 100%; touch-action: none; cursor: grab; }
+.atlas-visor small { position: absolute; left: 0; right: 0; bottom: 10px; text-align: center; color: var(--texto-tenue); pointer-events: none; }
+.atlas-ficha { padding: 16px; overflow-y: auto; display: flex; flex-direction: column; gap: 7px; }
+.atlas-ficha h3 { margin: 0; font-family: 'Cinzel', serif; font-size: 1.4rem; }
+.atlas-ficha p { margin: 0; line-height: 1.4; font-size: 0.92rem; }
+.atlas-ficha .fila-titulo:not(:first-child) { margin-top: 8px; }
+.atlas-barra { display: grid; grid-template-columns: 96px 1fr 52px; align-items: center; gap: 8px; font-size: 0.82rem; }
+.atlas-barra i { height: 6px; background: rgba(150, 195, 230, 0.14); display: block; }
+.atlas-barra b { display: block; height: 100%; background: var(--acento); }
+.atlas-barra em { font-style: normal; text-align: right; font-weight: 700; }
+.atlas-dato { font-size: 0.88rem; line-height: 1.3; }
+.atlas-dato span { display: block; font-size: 0.7rem; letter-spacing: 0.12em; text-transform: uppercase; color: var(--texto-tenue); }
+.atlas-dato .fuerte { color: var(--propio); }
+.atlas-dato .debil { color: var(--peligro); }
+@media (max-width: 900px), (max-height: 520px) {
+  .pantalla-atlas.visible { padding: 34px 12px 8px; gap: 6px; }
+  .atlas-cuerpo { grid-template-columns: 120px 1fr 240px; gap: 6px; }
+  .atlas-item { padding: 4px 6px; font-size: 0.78rem; }
+  .atlas-ficha { padding: 10px; }
+  .atlas-ficha h3 { font-size: 1.05rem; }
+  .atlas-ficha p { font-size: 0.8rem; }
+  .atlas-barra { grid-template-columns: 70px 1fr 40px; font-size: 0.72rem; }
+}
