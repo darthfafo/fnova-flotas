@@ -104,7 +104,7 @@ export class Salon {
       </div>`}
       <form id="form-cuenta" class="form-cuenta">
         ${crear ? `<label>Nombre de comandante<input name="nombre" maxlength="20" minlength="3" required autocomplete="nickname" placeholder="Como te van a ver en el ranking" /></label>
-        <label>Facción<select name="faccion" id="select-faccion">${Object.values(FACCIONES).map((f) => `<option value="${f.clave}">${f.nombre}</option>`).join('')}</select></label>
+        <label>Facción<select name="faccion" id="select-faccion">${Object.values(FACCIONES).filter((f) => !f.soloCampana).map((f) => `<option value="${f.clave}">${f.nombre}</option>`).join('')}</select></label>
         <div class="nota-faccion" id="nota-faccion" style="--color:${FACCIONES.guardianes.acentoCss}">${bloqueRasgo(FACCIONES.guardianes)}</div>
         <p class="nota">Tu facción define tus naves y su rasgo en batalla. Con <b>Partida rápida</b> podés probar la otra cuando quieras.</p>` : ''}
         ${soloPerfil ? '' : `<label>Email<input name="email" type="email" required autocomplete="email" /></label>

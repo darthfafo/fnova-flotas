@@ -244,6 +244,26 @@ export class Hud {
     g.clearRect(0, 0, innerWidth, innerHeight)
     const s = {}
 
+    // Objetivos de la misión: rombo con nombre, también fuera de la selección.
+    for (const m of this.mision?.marcas() ?? []) {
+      e.aPantalla(m.pos, s)
+      if (s.z > 1) continue
+      const x = Math.min(innerWidth - 70, Math.max(70, s.x))
+      const y = Math.min(innerHeight - 30, Math.max(30, s.y)) - 22
+      g.strokeStyle = g.fillStyle = m.propio ? '#ffd27a' : '#ff8a5a'
+      g.lineWidth = 1.5
+      g.beginPath()
+      g.moveTo(x, y - 6)
+      g.lineTo(x + 6, y)
+      g.lineTo(x, y + 6)
+      g.lineTo(x - 6, y)
+      g.closePath()
+      g.stroke()
+      g.font = '600 11px Rajdhani, sans-serif'
+      g.textAlign = 'center'
+      g.fillText(m.texto.toUpperCase(), x, y - 11)
+    }
+
     // Íconos tácticos para naves que de lejos se ven como un punto, y
     // corchetes + barras para las seleccionadas.
     for (const n of this.batalla.naves) {

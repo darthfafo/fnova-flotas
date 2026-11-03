@@ -181,8 +181,8 @@ export class Batalla {
     this.terminada = null
   }
 
-  agregarBatallon(equipo, tipo, centro, rumbo) {
-    const faccion = this.facciones[equipo]
+  // faccion: en la campaña un bando puede sumar naves de otra facción.
+  agregarBatallon(equipo, tipo, centro, rumbo, faccion = this.facciones[equipo]) {
     this.contador[equipo][tipo] = (this.contador[equipo][tipo] ?? 0) + 1
     const b = new Batallon(this.batallones.length + 1, equipo, faccion, tipo, this.contador[equipo][tipo])
     b.rumbo.copy(rumbo)
@@ -203,7 +203,7 @@ export class Batalla {
   }
 
   enemigosDe(equipo, soloVisibles = false) {
-    return this.batallones.filter((b) => b.equipo !== equipo && b.viva && (!soloVisibles || this.batallonVisible(equipo, b)))
+    return this.batallones.filter((b) => b.equipo !== equipo && b.viva && !b.decorado && (!soloVisibles || this.batallonVisible(equipo, b)))
   }
 
   // --- Sensores -------------------------------------------------------------
@@ -227,6 +227,11 @@ export class Batalla {
       const propias = this.naves.filter((n) => n.viva && n.equipo === equipo)
       for (const e of this.naves) {
         if (!e.viva || e.equipo === equipo) continue
+        // Las piezas de una misión (cargueros, estaciones) emiten baliza.
+        if (e.batallon.pieza) {
+          vis.add(e)
+          continue
+        }
         let rango = e.enNebulosa ? 280 : 3500
         if (this.tiempo - e.ultimoDisparo < 2.5) rango = Math.max(rango, 1600)
         for (const o of propias) {
@@ -329,15 +334,19 @@ export class Batalla {
         this.relojSensores = 0.4
         this.actualizarSensores()
       }
-      for (const b of this.batallones) if (b.viva) this.pensarBatallon(b)
+      if (!this.tregua) for (const b of this.batallones) if (b.viva) this.pensarBatallon(b)
     }
     for (const n of this.naves) {
       if (n.viva) {
-        if (!enCurso) continue
-        this.moverNave(n, dt)
-        this.dispararNave(n, dt)
+        // Después de una misión ganada la flota sigue su camino (cinemática).
+        if (!enCurso) {
+          if (this.desfile && n.tipo.velocidad) this.moverNave(n, dt)
+          continue
+        }
+        if (n.tipo.velocidad) this.moverNave(n, dt)
+        if (!this.tregua) this.dispararNave(n, dt)
         this.regenerar(n, dt)
-        if (n.tipo.hangar) this.operarHangar(n, dt)
+        if (n.tipo.hangar && !this.tregua) this.operarHangar(n, dt)
       } else if (n.malla !== undefined && n.muerte < 4) {
         // La explosión final de una capital destroza las rocas de alrededor.
         if (n.esCapital && n.muerte < 3 && n.muerte + dt >= 3) this.dañarRocasCerca(n.pos, n.radio * 4, 600)
@@ -427,7 +436,7 @@ export class Batalla {
       } else b.orden.vistoEn ??= this.tiempo
     }
     // Adquisición automática según la táctica.
-    if (b.orden.tipo === 'quieto') {
+    if (b.orden.tipo === 'quieto' && !b.pieza) {
       const alcance = TACTICAS[b.tactica].alcanceDeteccion
       const atacado = this.tiempo - b.atacadoEn < 3
       if (alcance > 0 || atacado) {
@@ -708,8 +717,8 @@ export class Batalla {
         if (d2 >= min * min || d2 < 1e-6) continue
         const d = Math.sqrt(d2)
         const empuje = ((min - d) / d) * Math.min(1, dt * 4)
-        // La nave más chica es la que se corre.
-        const pa = b.radio / (a.radio + b.radio)
+        // La nave más chica es la que se corre; las estructuras no se mueven.
+        const pa = !a.tipo.velocidad ? 0 : !b.tipo.velocidad ? 1 : b.radio / (a.radio + b.radio)
         a.pos.x += dx * empuje * pa
         a.pos.y += dy * empuje * pa
         a.pos.z += dz * empuje * pa
@@ -909,7 +918,7 @@ export class Batalla {
     this.eventos.push({ tipo: 'impacto', nave: o, pos: p.pos.clone(), escudo: resto === 0, arma: p.tipo })
     // Defensa propia: un batallón quieto devuelve el fuego (salvo evasivo).
     const b = o.batallon
-    if (b.orden.tipo === 'quieto' && b.tactica !== 'evasiva' && p.autor.batallon.viva)
+    if (b.orden.tipo === 'quieto' && b.tactica !== 'evasiva' && !b.pieza && p.autor.batallon.viva)
       b.orden = { tipo: 'atacar', objetivo: p.autor.batallon, automatico: true }
     if (o.estructura <= 0) this.destruir(o, p.autor)
   }
@@ -946,6 +955,7 @@ export class Batalla {
   }
 
   comprobarFin() {
+    if (this.mision) return // en la campaña decide la misión
     const jugador = this.batallones.some((b) => b.equipo === JUGADOR && b.viva)
     const enemigo = this.batallones.some((b) => b.equipo === ENEMIGO && b.viva)
     if (!enemigo) this.terminada = 'victoria'

@@ -266,7 +266,7 @@ export class Motores {
     let i = 0
     for (const n of naves) {
       if (i >= this.max) break
-      if (!n.viva || (n.malla && !n.malla.visible)) continue
+      if (!n.viva || !n.tipo.velocidad || (n.malla && !n.malla.visible)) continue
       _v.set(0, 0, n.cola * 0.92).applyQuaternion(n.quat).add(n.pos)
       this.pos.set([_v.x, _v.y, _v.z], i * 3)
       const empuje = 0.35 + 0.65 * Math.min(1, n.velocidad / n.velocidadMax)

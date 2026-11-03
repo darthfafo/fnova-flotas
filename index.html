@@ -65,7 +65,8 @@
         <li><b>IA o amigos</b><span>Subí al Salón de la Fama o desafiá a otro comandante</span></li>
       </ul>
       <div class="botonera vertical" id="botones-titulo">
-        <button class="btn grande" data-accion="nueva">Jugar</button>
+        <button class="btn grande" data-accion="campana">Campaña</button>
+        <button class="btn" data-accion="nueva">Jugar</button>
         <button class="btn" data-accion="multijugador" title="Batallas contra otros comandantes">Multijugador</button>
         <button class="btn" data-accion="tutorial">Tutorial</button>
       </div>
@@ -205,6 +206,11 @@
     <div class="cartel-pausa" id="hud-pausa" hidden>Pausa táctica · seguí dando órdenes · P para continuar</div>
     <canvas class="panel minimapa" id="hud-minimapa" title="Clic: mover la cámara · Clic con dos dedos: mover la selección"></canvas>
     <ul class="registro" id="hud-registro"></ul>
+    <aside class="panel hud-mision" id="hud-mision" hidden>
+      <div class="titulo-lista">Objetivos</div>
+      <ul id="hud-objetivos"></ul>
+    </aside>
+    <div class="hud-transmision" id="hud-transmision" hidden></div>
   </div>
 
   <aside class="panel tutorial" id="tutorial" hidden></aside>
@@ -222,6 +228,30 @@
       <div id="cuenta-contenido"></div>
     </div>
   </section>
+
+  <section id="pantalla-campana" class="pantalla pantalla-campana">
+    <header class="armado-cab">
+      <button class="btn chico" data-accion="volver-titulo">‹ Inicio</button>
+      <h2>Campaña</h2>
+      <div class="campana-ordenes" id="campana-ordenes"></div>
+    </header>
+    <div class="campana-cuerpo">
+      <div class="panel campana-mapa" id="campana-mapa"></div>
+      <div class="panel campana-detalle" id="campana-detalle"></div>
+    </div>
+  </section>
+
+  <section id="pantalla-cronica" class="pantalla superpuesta">
+    <div class="panel ventana-cronica" id="cronica-contenido"></div>
+  </section>
+
+  <div class="cine" id="cine" hidden>
+    <div class="franja arriba"></div>
+    <div class="franja abajo"></div>
+    <div class="cine-titulo" id="cine-titulo"></div>
+    <p class="linea-prologo" id="cine-linea"></p>
+    <button class="btn chico saltar" id="cine-saltar">Saltar ›</button>
+  </div>
 
   <section id="pantalla-creditos" class="pantalla superpuesta">
     <div class="panel ventana-creditos">

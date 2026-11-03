@@ -7,6 +7,7 @@ import * as THREE from 'three'
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js'
 import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js'
 import { FACCIONES, TIPOS } from '../datos.js'
+import { ESTRUCTURAS } from './estaciones.js'
 
 const plantillas = {} // `${faccion}/${tipo}` -> { geometria, material, escala, radio, cola }
 
@@ -21,8 +22,12 @@ const GIRO = {
 export async function cargarModelos(alProgresar) {
   const loader = new GLTFLoader()
   const archivos = new Set()
-  for (const f of Object.values(FACCIONES)) for (const m of Object.values(f.modelos)) archivos.add(m)
   const cargados = {}
+  for (const f of Object.values(FACCIONES))
+    for (const m of Object.values(f.modelos)) {
+      if (ESTRUCTURAS[m]) cargados[m] ??= ESTRUCTURAS[m]()
+      else archivos.add(m)
+    }
   let hechos = 0
   await Promise.all(
     [...archivos].map(

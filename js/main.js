@@ -6,6 +6,9 @@ import { cargarModelos, plantilla, crearMallaNave } from './motor/modelos.js'
 import { CamaraOrbital } from './motor/camara.js'
 import { Particulas, Proyectiles, Motores, Escudos, Ondas, COLOR_ESCUDO, COLOR_FUEGO, COLOR_HUMO, COLOR_FLAK, COLOR_DESTELLO } from './motor/efectos.js'
 import { Sonido } from './motor/sonido.js'
+import { Mision } from './sim/mision.js'
+import { Campana, PanelMision } from './ui/campana.js'
+import { Cinematica } from './ui/cinematica.js'
 import { Musica } from './motor/musica.js'
 import { Intro } from './ui/intro.js'
 import { Batalla, JUGADOR, ENEMIGO } from './sim/batalla.js'
@@ -79,6 +82,11 @@ const menus = new Menus({
     ),
 })
 
+const campana = new Campana({
+  faccionFija: () => cuenta.perfil?.faccion ?? null,
+  alJugar: (def, faccion) => iniciarBatalla({ ...menus.config, faccion, dificultad: 'normal', mapa: def.mapa, flota: def.jugador.flota, presupuesto: 0 }, { mision: def }),
+})
+
 const multijugador = new Multijugador({
   menus,
   cuenta,
@@ -138,6 +146,10 @@ document.body.addEventListener('click', (e) => {
   if (a === 'cerrar-creditos' || e.target.id === 'pantalla-creditos') document.getElementById('pantalla-creditos').classList.remove('visible')
   if (a === 'abandonar') {
     cerrarAyuda()
+    if (partida?.mision) {
+      terminarBatalla()
+      return campana.abrir()
+    }
     if (partida?.red) {
       // Abandonar una batalla en red es rendirse.
       partida.red.canal.enviar('rendicion', {})
@@ -304,8 +316,13 @@ function iniciarBatalla(config, opciones = {}) {
   // que le describe el anfitrión y solo la reproduce (ver red/partida.js).
   const red = opciones.red
   const invitado = red?.rol === 'invitado'
+  const defMision = opciones.mision
   let batalla, terreno, faccionEnemiga, flotaRival
-  if (invitado) {
+  if (defMision) {
+    faccionEnemiga = defMision.rival
+    terreno = new Terreno(defMision.mapa, 1, defMision.semilla)
+    batalla = new Batalla({ faccionJugador: config.faccion, faccionEnemiga, plantilla, crearMalla: crearMallaNave, terreno })
+  } else if (invitado) {
     batalla = new BatallaRemota({ descripcion: red.descripcion, plantilla, crearMalla: crearMallaNave, canal: red.canal })
     terreno = batalla.terreno
     faccionEnemiga = batalla.facciones[ENEMIGO]
@@ -329,8 +346,18 @@ function iniciarBatalla(config, opciones = {}) {
   particulas.puntos.material.uniforms.escala.value = escalaPuntos()
   motores.puntos.material.uniforms.escala.value = escalaPuntos()
 
-  let propios
-  if (invitado) propios = batalla.batallones.filter((b) => b.equipo === JUGADOR)
+  let propios, mision, panelMision
+  if (defMision) {
+    panelMision = new PanelMision()
+    mision = new Mision({
+      def: defMision,
+      batalla,
+      alTransmision: (quien, texto) => panelMision.transmision(quien, texto),
+      alCambio: (lista) => panelMision.objetivos(lista),
+    })
+    propios = mision.desplegar()
+    batalla.tregua = true
+  } else if (invitado) propios = batalla.batallones.filter((b) => b.equipo === JUGADOR)
   else {
     propios = desplegar(batalla, JUGADOR, config.flota)
     desplegar(batalla, ENEMIGO, flotaRival)
@@ -340,6 +367,10 @@ function iniciarBatalla(config, opciones = {}) {
 
   // En multijugador el otro bando lo maneja una persona, no la IA.
   const ia = red ? { actualizar() {}, esperando: false } : new ComandanteIA(batalla, config.dificultad)
+  if (mision) {
+    mision.ia = ia
+    ia.esperando = true
+  }
   let hud = null
   const entrada = new Entrada({
     elemento: renderer.domElement,
@@ -362,14 +393,14 @@ function iniciarBatalla(config, opciones = {}) {
   const tactil = new Tactil({ elemento: renderer.domElement, entrada, orbital })
   document.body.classList.add('en-batalla')
   partida = {
-    batalla, ia, entrada, hud, config, terreno3d, tactil,
+    batalla, ia, entrada, hud, config, terreno3d, tactil, mision, panelMision,
     fin: 0,
     pausaTactica: false,
     velocidad: 1,
     fps: { t: 0, n: 0, ajustado: config.calidad === 'baja' },
   }
   pausa = false
-  if (!red && (opciones.tutorial || !tutorialVisto())) partida.tutorial = new Tutorial({ orbital, ia })
+  if (!red && !mision && (opciones.tutorial || !tutorialVisto())) partida.tutorial = new Tutorial({ orbital, ia })
   partida.esTutorial = !!opciones.tutorial
   partida.red = red
   // En red no hay pausa táctica ni velocidad ×2: el tiempo es el mismo para los dos.
@@ -403,6 +434,7 @@ function iniciarBatalla(config, opciones = {}) {
   entrada.seleccionar(propios)
 
   for (const p of document.querySelectorAll('.pantalla')) p.classList.remove('visible')
+  if (mision) return abrirRelato(partida, defMision)
   hud.registrar(
     red
       ? `Batalla contra ${red.nombreRival ?? 'tu rival'} (${FACCIONES[faccionEnemiga].nombre}). Que gane el mejor comandante.`
@@ -411,8 +443,57 @@ function iniciarBatalla(config, opciones = {}) {
   hud.registrar(`Mapa: ${MAPAS[terreno.tipo].nombre}`)
 }
 
+function ocultarHud(p) {
+  document.getElementById('hud').hidden = true
+  p.hud.g.clearRect(0, 0, innerWidth, innerHeight)
+  p.entrada.inactiva = true
+}
+
+// Relato de apertura sobre el escenario real: todos quietos hasta que termina.
+function abrirRelato(p, def) {
+  ocultarHud(p)
+  p.hud.mision = p.mision
+  p.cine = new Cinematica({
+    tomas: def.relato,
+    titulo: `<div><small>Escenario ${def.numero}</small>${def.titulo}</div>`,
+    orbital,
+    foco: (f) => p.mision.foco(f),
+    alTerminar: () => {
+      p.cine = null
+      document.getElementById('hud').hidden = false
+      p.entrada.inactiva = false
+      p.mision.iniciar()
+      const c = p.mision.foco('jugador')
+      orbital.focoDeseado.copy(c)
+      orbital.yaw = 0.35
+      orbital.pitch = 0.32
+      orbital.distDeseada = 420
+      p.hud.redimensionar()
+    },
+  })
+}
+
+// Relato de cierre: después vienen la crónica y el tablero.
+function cerrarMision(p) {
+  p.cierre = true
+  const victoria = p.batalla.terminada === 'victoria'
+  ocultarHud(p)
+  const def = p.mision.def
+  p.cine = new Cinematica({
+    tomas: victoria ? def.victoria : def.derrota,
+    orbital,
+    foco: (f) => p.mision.foco(f) ?? p.mision.foco('enemigo') ?? p.mision.foco('jugador'),
+    alTerminar: () => {
+      const resultado = p.batalla.terminada
+      terminarBatalla()
+      campana.alTerminar(resultado)
+    },
+  })
+}
+
 function terminarBatalla() {
   if (!partida) return
+  partida.panelMision?.destruir()
   for (const n of partida.batalla.naves) if (n.malla) escena.remove(n.malla)
   partida.entrada.destruir()
   partida.tactil.destruir()
@@ -580,9 +661,16 @@ function procesarEventos(batalla, verTodo = false) {
   for (const ev of batalla.eventos) {
     if (ev.tipo === 'disparo') {
       if (disparoOculto(batalla, ev.autor, verTodo)) continue
-      colorDisparo.set(FACCIONES[batalla.facciones[ev.equipo]].disparo)
+      colorDisparo.set(FACCIONES[ev.autor?.batallon.faccion ?? batalla.facciones[ev.equipo]].disparo)
       particulas.emitir(ev.pos, _v.set(0, 0, 0), colorDisparo, ev.arma === 'cañon' ? 16 : ev.arma === 'torpedo' ? 8 : 4, 0.08)
       sonido.reproducir(ev.arma, ev.pos, camara)
+    } else if (ev.tipo === 'salto') {
+      // Una pieza llegó al punto de salto: destello y desaparece.
+      colorDisparo.set(FACCIONES[ev.nave.batallon.faccion].acento)
+      particulas.emitir(ev.nave.pos, _v.set(0, 0, 0), colorDisparo, 40, 0.5)
+      ondas.lanzar(ev.nave.pos, ev.nave.radio * 3, colorDisparo, 0.8)
+      if (ev.nave.malla) escena.remove(ev.nave.malla)
+      ev.nave.malla = null
     } else if (ev.tipo === 'lanzamiento') {
       colorDisparo.set(FACCIONES[batalla.facciones[ev.nave.equipo]].acento)
       particulas.emitir(ev.nave.pos, _v.set(0, 0, 0), colorDisparo, 10, 0.3)
@@ -666,6 +754,8 @@ function sincronizarNaves(batalla, dt, verTodo = false) {
   for (const n of batalla.naves) {
     const m = n.malla
     if (!m) continue
+    // Naves que nacen en plena batalla (hangar, refuerzos).
+    if (!m.parent) escena.add(m)
     // Las naves enemigas fuera de tus sensores no se dibujan.
     m.visible = verTodo || !n.viva || n.equipo === JUGADOR || batalla.esVisible(JUGADOR, n)
     m.position.copy(n.pos)
@@ -713,11 +803,13 @@ function cuadro() {
   const dt = Math.min(reloj.getDelta(), 0.1)
   const p = partida
   if (p && !pausa) p.tutorial?.actualizar(dt)
+  p?.cine?.actualizar(dt)
   if (p && !pausa && !p.pausaTactica) {
     const dtJuego = dt * p.velocidad
     const pasos = Math.ceil(dtJuego / PASO)
     for (let i = 0; i < pasos; i++) p.batalla.paso(dtJuego / pasos)
     p.ia.actualizar(dtJuego)
+    p.mision?.actualizar(dtJuego)
     if (p.sincro) {
       p.sincro.recolectar()
       p.sincro.actualizar(dtJuego)
@@ -734,7 +826,12 @@ function cuadro() {
     dibujarProyectiles(p.batalla)
     motores.dibujar(p.batalla.naves)
     ajustarCalidad(p, dt)
-    if (p.batalla.terminada) {
+    if (p.mision) {
+      if (p.batalla.terminada) {
+        p.fin += dt
+        if (p.fin > 2.5 && !p.cierre) cerrarMision(p)
+      }
+    } else if (p.batalla.terminada) {
       p.fin += dt
       if (p.fin > 4.5) {
         const informe = armarInforme({
@@ -772,7 +869,7 @@ function cuadro() {
   orbital.actualizar(dt)
   fondo.position.copy(camara.position)
   renderer.render(escena, camara)
-  if (partida) {
+  if (partida && !partida.cine) {
     // En pausa táctica la cámara se mueve libre: las mallas siguen donde estaban.
     partida.hud.dibujar(pausa ? 0 : dt)
   }
@@ -799,6 +896,7 @@ function ajustarCalidad(p, dt) {
 // Gancho para depurar desde la consola: __flotas.simular(30) adelanta la
 // batalla 30 segundos sin esperar a que se dibuje.
 window.__flotas = {
+  campana,
   get partida() {
     return partida
   },

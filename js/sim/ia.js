@@ -37,10 +37,11 @@ export class ComandanteIA {
     this.esperando = false // el tutorial frena a la IA hasta terminar
     this.ultimaPosicionRival = null
     this.roles = new Map() // batallón → 'linea' | 'escolta' | 'flanco'
+    this.prioridad = [] // campaña: batallones que hay que atacar primero
   }
 
   propios() {
-    return this.batalla.batallones.filter((x) => x.equipo === this.equipo && x.viva)
+    return this.batalla.batallones.filter((x) => x.equipo === this.equipo && x.viva && !x.pieza)
   }
 
   centroDe(lista) {
@@ -130,7 +131,7 @@ export class ComandanteIA {
   }
 
   avanzar(lista) {
-    const destino = this.ultimaPosicionRival ?? new THREE.Vector3(0, 0, 900 * this.frente)
+    const destino = this.prioridad[0]?.centro() ?? this.ultimaPosicionRival ?? new THREE.Vector3(0, 0, 900 * this.frente)
     const linea = lista.filter((p) => this.roles.get(p) !== 'flanco' || p.flanco === 'hecho')
     const flancos = lista.filter((p) => this.roles.get(p) === 'flanco' && p.flanco !== 'hecho')
     if (linea.length) this.batalla.ordenarMover(linea, destino.clone(), 'garra')
@@ -204,6 +205,7 @@ export class ComandanteIA {
         s += Math.min(aliados, 3) * 0.5
         if (amenazas.includes(r)) s += 1.5
       }
+      if (this.prioridad.includes(r)) s += 2.5
       s += Math.random() * 0.5
       if (s > puntaje) {
         puntaje = s

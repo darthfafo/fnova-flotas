@@ -813,3 +813,79 @@ html.tactil .grupo-comandos:not(.solo-tactil):not(.solo-mover) .btn.comando b { 
   .lista-tipos .tipo-fila { flex: none; }
 }
 .girar-telefono small { color: var(--texto-tenue); letter-spacing: 0.08em; }
+
+/* --- Campaña ------------------------------------------------------------- */
+.pantalla-campana.visible { flex-direction: column; justify-content: flex-start; gap: 12px; padding: 48px 24px 20px; }
+.pantalla-campana .armado-cab { width: min(1180px, 100%); }
+.campana-ordenes { display: flex; gap: 8px; justify-content: flex-end; }
+.campana-ordenes .btn.activo { border-color: var(--acento); color: #fff; }
+.campana-ordenes small { opacity: 0.7; margin-left: 4px; }
+.campana-cuerpo { flex: 1; min-height: 0; width: min(1180px, 100%); display: grid; grid-template-columns: 1fr 300px; gap: 12px; }
+.campana-mapa {
+  position: relative; min-height: 0; overflow: hidden;
+  background: radial-gradient(ellipse at 22% 70%, rgba(63, 120, 200, 0.16), transparent 55%), radial-gradient(ellipse at 78% 30%, rgba(255, 110, 60, 0.14), transparent 55%), rgba(6, 10, 18, 0.62);
+}
+.campana-mapa svg { position: absolute; inset: 0; width: 100%; height: 100%; }
+.campana-mapa line { stroke: rgba(150, 195, 230, 0.25); stroke-width: 2; stroke-dasharray: 6 6; }
+.campana-mapa line.hecho { stroke: var(--ambar); stroke-dasharray: none; }
+.nodo {
+  position: absolute; transform: translate(-50%, -50%); width: 118px; background: none; border: 0; padding: 0;
+  color: var(--texto); font: inherit; cursor: pointer; display: flex; flex-direction: column; align-items: center; gap: 6px;
+}
+.nodo b {
+  width: 52px; height: 52px; border-radius: 50%; display: grid; place-items: center; font-family: 'Cinzel', serif; font-size: 1.05rem;
+  background: rgba(8, 14, 22, 0.92); border: 2px solid var(--acento); transition: box-shadow 0.2s;
+}
+.nodo span { font-size: 0.82rem; line-height: 1.15; text-align: center; font-weight: 600; }
+.nodo.hecho b { border-color: var(--ambar); color: var(--ambar); }
+.nodo.actual b { animation: nodo-actual 1.8s ease-in-out infinite; }
+@keyframes nodo-actual { 50% { box-shadow: 0 0 22px var(--acento); } }
+.nodo.elegido b { background: var(--acento); color: #06101a; border-color: #fff; }
+.nodo.bloqueado { opacity: 0.4; cursor: default; }
+.nodo.bloqueado b { border-color: var(--borde); }
+.campana-detalle { padding: 18px; display: flex; flex-direction: column; gap: 10px; overflow-y: auto; }
+.campana-detalle h3 { margin: 0; font-family: 'Cinzel', serif; font-size: 1.3rem; }
+.campana-detalle p { margin: 0 0 6px; line-height: 1.45; }
+.ventana-cronica { width: min(520px, 92vw); padding: 26px 28px; text-align: center; }
+.ventana-cronica .encabezado { min-width: 0; margin: 6px 0 14px; font-size: 1.25rem; }
+.cronica-texto { font-size: 1.02rem; line-height: 1.6; font-style: italic; color: #efe3cf; }
+.cronica-botones { display: flex; gap: 10px; justify-content: center; margin-top: 18px; }
+
+.cine { position: fixed; inset: 0; z-index: 25; display: flex; align-items: flex-end; justify-content: center; padding-bottom: 17vh; }
+.cine .franja { position: absolute; left: 0; right: 0; height: 0; background: #000; transition: height 1.2s cubic-bezier(0.6, 0, 0.2, 1); }
+.cine .franja.arriba { top: 0; }
+.cine .franja.abajo { bottom: 0; }
+.cine.activa .franja { height: 11vh; }
+.cine .saltar { position: absolute; right: 24px; bottom: calc(11vh + 14px); z-index: 4; }
+.cine .linea-prologo { position: relative; z-index: 3; }
+.cine-titulo {
+  position: absolute; inset: 0; display: grid; place-items: center; text-align: center; z-index: 3; opacity: 0; transition: opacity 0.8s;
+  font-family: 'Cinzel', serif; font-size: clamp(1.4rem, 4vw, 2.6rem); color: #f3e2c4; text-shadow: 0 0 24px rgba(0, 0, 0, 0.9); pointer-events: none;
+}
+.cine-titulo small { display: block; font-size: 0.45em; letter-spacing: 0.4em; color: var(--ambar); margin-bottom: 8px; }
+.cine-titulo.visible { opacity: 1; }
+
+.hud-mision { position: absolute; top: 56px; right: 12px; width: 250px; padding: 10px 12px; pointer-events: none; }
+.hud-mision ul { list-style: none; margin: 6px 0 0; padding: 0; font-size: 0.9rem; }
+.hud-mision li { display: flex; gap: 6px; align-items: baseline; line-height: 1.25; margin-top: 4px; }
+.hud-mision li i { font-style: normal; color: var(--ambar); }
+.hud-mision li span { flex: 1; }
+.hud-mision li b { color: var(--ambar); }
+.hud-mision li.cumplido { opacity: 0.6; }
+.hud-mision li.fallido { color: var(--peligro); }
+.hud-transmision {
+  position: absolute; top: 56px; left: 50%; transform: translateX(-50%); width: min(460px, 46vw); padding: 8px 14px; pointer-events: none;
+  background: var(--fondo-panel); border-left: 3px solid var(--acento); line-height: 1.3;
+}
+.hud-transmision b:first-child { display: block; font-size: 0.72rem; letter-spacing: 0.14em; text-transform: uppercase; color: var(--acento); }
+@media (max-height: 520px) {
+  .pantalla-campana.visible { padding: 34px 12px 8px; gap: 6px; }
+  .campana-cuerpo { grid-template-columns: 1fr 220px; }
+  .nodo { width: 84px; }
+  .nodo b { width: 36px; height: 36px; font-size: 0.8rem; }
+  .nodo span { font-size: 0.68rem; }
+  .campana-detalle { padding: 10px; gap: 6px; font-size: 0.82rem; }
+  .campana-detalle h3 { font-size: 1rem; }
+  .hud-mision { width: 180px; top: 40px; font-size: 0.75rem; }
+  .hud-transmision { top: 40px; font-size: 0.78rem; }
+}

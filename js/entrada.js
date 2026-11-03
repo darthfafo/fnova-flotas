@@ -48,7 +48,7 @@ export class Entrada {
       },
     }
     for (const [k, f] of Object.entries(this.manejadores)) elemento.addEventListener(k, f)
-    this.teclaAbajo = (e) => this.alTecla(e)
+    this.teclaAbajo = (e) => !this.inactiva && this.alTecla(e)
     this.teclaArriba = (e) => {
       this.orbital.teclas.delete(normalizar(e.key))
       if (e.key === 'Shift' && this.movimiento) this.movimiento.ajustandoAltura = false
@@ -128,7 +128,7 @@ export class Entrada {
 
   seleccionar(lista, sumar = false) {
     if (!sumar) this.seleccion.clear()
-    for (const b of lista) if (b.equipo === JUGADOR && b.viva) this.seleccion.add(b)
+    for (const b of lista) if (b.equipo === JUGADOR && b.viva && !b.pieza) this.seleccion.add(b)
     this.alCambiarSeleccion()
   }
 

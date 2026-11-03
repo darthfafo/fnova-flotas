@@ -3,6 +3,9 @@
 // una batalla en tiempo real dure minutos y no segundos: las naves capitales
 // reciben más multiplicador de aguante que las chicas, igual que en Homeworld.
 
+// Piezas de las misiones de campaña: el carguero cambia según la facción.
+const piezas = (carguero) => ({ carguero, derelicto: 'executioner', estacion: 'gen-estacion', laboratorio: 'gen-laboratorio', repetidor: 'gen-repetidor', mente: 'gen-mente' })
+
 export const FACCIONES = {
   guardianes: {
     clave: 'guardianes',
@@ -15,7 +18,7 @@ export const FACCIONES = {
     acento: 0x3fa9ff,
     acentoCss: '#3fa9ff',
     disparo: 0x7cc8ff,
-    modelos: { caza: 'challenger', corbeta: 'rylek-skiff', bombardero: 'omen', crucero: 'rylek-galley', portanaves: 'rylek-brig', acorazado: 'rylek-galleon' },
+    modelos: { caza: 'challenger', corbeta: 'rylek-skiff', bombardero: 'omen', crucero: 'rylek-galley', portanaves: 'rylek-brig', acorazado: 'rylek-galleon', ...piezas('insurgent') },
     // Rasgo de batalla: aguantan más, pegan igual, se mueven un poco más lento.
     rasgo: {
       nombre: 'Disciplina del Crisol',
@@ -37,7 +40,7 @@ export const FACCIONES = {
     acento: 0xff4a2a,
     acentoCss: '#ff5a36',
     disparo: 0xffa040,
-    modelos: { caza: 'striker', corbeta: 'rlab-ranger', bombardero: 'spitfire', crucero: 'rlab-fragata', portanaves: 'rlab-skycruiser', acorazado: 'pancake' },
+    modelos: { caza: 'striker', corbeta: 'rlab-ranger', bombardero: 'spitfire', crucero: 'rlab-fragata', portanaves: 'rlab-skycruiser', acorazado: 'pancake', ...piezas('zenith') },
     // Rasgo de batalla: pegan más y son más rápidos, con escudos más débiles.
     rasgo: {
       nombre: 'Tecnología prohibida',
@@ -47,6 +50,20 @@ export const FACCIONES = {
       efectos: ['+14% de daño en todas las armas', '+8% de velocidad', '−12% de escudo'],
       estilo: 'Golpean primero y ganan los duelos de naves capitales. Sufren contra enjambres que se reparan.',
     },
+  },
+  // Maquinaria común tomada por la Mente: solo aparece en la campaña.
+  automatas: {
+    clave: 'automatas',
+    nombre: 'Autómatas',
+    soloCampana: true,
+    lema: 'Sin mente propia, hasta que alguien les presta una',
+    descripcion: '',
+    casco: [0.5, 0.56, 0.54],
+    acento: 0x5dffb0,
+    acentoCss: '#5dffb0',
+    disparo: 0x8dffc8,
+    modelos: { caza: 'dispatcher', corbeta: 'bob', bombardero: 'executioner', crucero: 'zenith', portanaves: 'insurgent', acorazado: 'imperial', ...piezas('bob') },
+    rasgo: { escudo: 0.8, efectos: [], estilo: '' },
   },
 }
 
@@ -170,6 +187,25 @@ export const TIPOS = {
     rol: 'Nave capital definitiva: +25% de daño contra todo y gana el duelo contra el Crucero. Necesita escolta contra Bombarderos.',
   },
 }
+
+// Piezas de la campaña: no se compran ni se mandan, las maneja la misión.
+const pieza = (clave, nombre, largo, escudoMax, estructuraMax, resto = {}) => ({
+  clave, nombre, largo, escudoMax, estructuraMax,
+  clase: CAPITAL, porBatallon: 1, costo: 0,
+  ataque: 0, escudo: 0, estructura: 0,
+  velocidad: 0, giro: 0, aceleracion: 0,
+  armas: [], ventaja: {}, rol: '',
+  ...resto,
+})
+const torreta = (x, z) => ({ tipo: 'flak', daño: 8, cadencia: 0.6, alcance: 420, montaje: [x, 0.1, z] })
+Object.assign(TIPOS, {
+  carguero: pieza('carguero', 'Carguero', 40, 800, 2600, { velocidad: 16, giro: 0.4, aceleracion: 5 }),
+  derelicto: pieza('derelicto', 'Nave varada', 60, 0, 5000),
+  estacion: pieza('estacion', 'Estación', 110, 900, 4200, { armas: [torreta(0, 0.3), torreta(0, -0.3), torreta(0.3, 0), torreta(-0.3, 0)] }),
+  laboratorio: pieza('laboratorio', 'Laboratorio', 130, 1500, 6000, { armas: [torreta(0, 0.3), torreta(0, -0.3), torreta(0.3, 0), torreta(-0.3, 0)] }),
+  repetidor: pieza('repetidor', 'Repetidor', 30, 500, 1700, { armas: [torreta(0, 0), torreta(0, 0)] }),
+  mente: pieza('mente', 'La Mente', 240, 2000, 9000, { armas: [torreta(0.2, 0), torreta(-0.2, 0), torreta(0, 0.2), torreta(0, -0.2)] }),
+})
 
 export const ORDEN_TIPOS = ['caza', 'corbeta', 'bombardero', 'crucero', 'portanaves', 'acorazado']
 

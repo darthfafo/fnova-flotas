@@ -76,7 +76,7 @@ export class Menus {
   armarFacciones() {
     const lista = $('#lista-facciones')
     lista.innerHTML = ''
-    for (const f of Object.values(FACCIONES)) {
+    for (const f of Object.values(FACCIONES).filter((x) => !x.soloCampana)) {
       const t = document.createElement('div')
       t.className = 'tarjeta-faccion'
       t.style.setProperty('--color', f.acentoCss)
