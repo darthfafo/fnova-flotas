@@ -825,7 +825,9 @@ export class Batalla {
       objetivo: impacta && !proximidad && !contraRoca ? obj : null,
       daño,
       autor: n,
-      vida: proximidad || contraRoca ? origen.distanceTo(apunta) / p.velocidad : arma.alcance / p.velocidad + 1.2,
+      // Los que fallan se apagan poco después de pasar al blanco: si siguieran
+      // de largo cruzarían el mapa vacío y parecerían disparos de la nada.
+      vida: proximidad || contraRoca ? origen.distanceTo(apunta) / p.velocidad : impacta ? arma.alcance / p.velocidad + 1.2 : origen.distanceTo(apunta) / p.velocidad + 0.2,
       proximidad: proximidad && !contraRoca,
       contraRoca: !!contraRoca,
       roca: contraRoca?.asteroide,
@@ -843,7 +845,9 @@ export class Batalla {
       const o = p.objetivo
       if (o) {
         if (!o.viva) {
+          // El blanco ya cayó: el disparo se apaga enseguida.
           p.objetivo = null
+          p.vida = Math.min(p.vida, 0.2)
         } else {
           // Los que van a pegar persiguen al blanco (corrige el adelanto).
           const hacia = _v.copy(o.pos).sub(p.pos)
