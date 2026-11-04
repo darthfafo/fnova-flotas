@@ -12,3 +12,9 @@ empaquetados con herramientas/gltf_a_glb.py (texturas reducidas) y teñidos por 
 - rylek-galleon.glb: "Rylek's Raiders: Predator class galleon" (https://sketchfab.com/3d-models/ryleks-raiders-predator-class-galleon-82108cf3ea684fd789d4e579633103f1) de Gwyvern
 - rylek-brig.glb: "Rylek's Raiders: Laboror Class Brig" (https://sketchfab.com/3d-models/ryleks-raiders-laboror-class-brig-4c31d80eca2d426893d66a61db5fdbb5) de Gwyvern
 - rlab-skycruiser.glb: "Sky Cruiser" (https://sketchfab.com/3d-models/sky-cruiser-6f7851a1ba094f27893af02cd971e30c) de Rakshaan
+
+Flotas Hiigaran y Vaygr (hgn-*.glb, vgr-*.glb), CC BY 4.0 según Sketchfab, de MrHohenheim
+(https://sketchfab.com/mrhohenheim). Son recreaciones de naves de Homeworld 2: el diseño original
+pertenece a sus dueños y la licencia del modelo no lo cubre.
+Hiigaran: Interceptor, Pulsar Mech Gun Gunship, Attack Bomber, Destroyer, Carrier, Battlecruiser.
+Vaygr: Lance Fighter, Laser Corvette, Bomber, Destroyer, Carrier (Fighter Production), Battlecruiser.

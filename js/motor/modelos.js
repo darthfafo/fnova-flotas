@@ -62,15 +62,20 @@ export async function cargarModelos(alProgresar) {
       geo.computeBoundingSphere()
       const capital = TIPOS[tipo].clase === 'capital'
       const material = Array.isArray(base.material)
-        ? base.material.map((m) => materialTexturado(m, f, capital))
+        ? base.material.map((m) => (nombre.startsWith('hgn-') || nombre.startsWith('vgr-') ? materialPropio(m) : materialTexturado(m, f, capital)))
         : materialFaccion(base.material, f, capital)
+      const ancho = (bb.max.x - bb.min.x) * escala
+      const alto = (bb.max.y - bb.min.y) * escala
       plantillas[`${f.clave}/${tipo}`] = {
         geometria: geo,
         material,
         radio: geo.boundingSphere.radius,
+        // Semiejes de la forma de la nave: impactos, escudo y choques. Una nave
+        // muy plana igual tiene algo de grosor para que el escudo se vea.
+        forma: new THREE.Vector3(Math.max(ancho / 2, TIPOS[tipo].largo * 0.12), Math.max(alto / 2, TIPOS[tipo].largo * 0.12), TIPOS[tipo].largo / 2),
         cola: (bb.min.z - centro.z) * escala,
-        ancho: (bb.max.x - bb.min.x) * escala,
-        alto: (bb.max.y - bb.min.y) * escala,
+        ancho,
+        alto,
       }
     }
   }
@@ -88,6 +93,8 @@ function unirMallas(escena, nombre) {
   if (mallas.length === 1 && !mallas[0].material.normalMap) return mallas[0]
   const materiales = []
   const geos = []
+  // Una textura, un grupo: menos llamadas de dibujo por nave.
+  const porTextura = new Map()
   const giro = new THREE.Matrix4().makeRotationY(GIRO[nombre] ?? 0)
   for (const o of mallas) {
     const g = new THREE.BufferGeometry()
@@ -95,8 +102,9 @@ function unirMallas(escena, nombre) {
     g.setIndex(o.geometry.index)
     const geo = g.toNonIndexed()
     geo.applyMatrix4(new THREE.Matrix4().multiplyMatrices(giro, o.matrixWorld))
-    let i = materiales.indexOf(o.material)
-    if (i < 0) i = materiales.push(o.material) - 1
+    const clave = o.material.map?.source.uuid ?? o.material.uuid
+    if (!porTextura.has(clave)) porTextura.set(clave, materiales.push(o.material) - 1)
+    const i = porTextura.get(clave)
     geos.push([i, geo])
   }
   // Una geometría por material, en el orden de `materiales`.
@@ -156,6 +164,14 @@ function materialFaccion(original, faccion, capital) {
       )
   }
   m.customProgramCacheKey = () => `faccion-${faccion.clave}-${capital}`
+  return m
+}
+
+// Las flotas de Homeworld ya vienen pintadas con los colores de cada bando.
+function materialPropio(original) {
+  const m = original.clone()
+  m.metalness = Math.min(m.metalness, 0.35)
+  m.roughness = Math.max(m.roughness, 0.55)
   return m
 }
 

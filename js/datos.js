@@ -18,7 +18,7 @@ export const FACCIONES = {
     acento: 0x3fa9ff,
     acentoCss: '#3fa9ff',
     disparo: 0x7cc8ff,
-    modelos: { caza: 'challenger', corbeta: 'rylek-skiff', bombardero: 'omen', crucero: 'rylek-galley', portanaves: 'rylek-brig', acorazado: 'rylek-galleon', ...piezas('insurgent') },
+    modelos: { caza: 'hgn-interceptor', corbeta: 'hgn-gunship', bombardero: 'hgn-bomber', crucero: 'hgn-destroyer', portanaves: 'hgn-carrier', acorazado: 'hgn-battlecruiser', ...piezas('rylek-brig') },
     // Rasgo de batalla: aguantan más, pegan igual, se mueven un poco más lento.
     rasgo: {
       nombre: 'Disciplina del Crisol',
@@ -40,7 +40,7 @@ export const FACCIONES = {
     acento: 0xff4a2a,
     acentoCss: '#ff5a36',
     disparo: 0xffa040,
-    modelos: { caza: 'striker', corbeta: 'rlab-ranger', bombardero: 'spitfire', crucero: 'rlab-fragata', portanaves: 'rlab-skycruiser', acorazado: 'pancake', ...piezas('zenith') },
+    modelos: { caza: 'vgr-lance', corbeta: 'vgr-corvette', bombardero: 'vgr-bomber', crucero: 'vgr-destroyer', portanaves: 'vgr-carrier', acorazado: 'vgr-battlecruiser', ...piezas('rlab-fragata') },
     // Rasgo de batalla: pegan más y son más rápidos, con escudos más débiles.
     rasgo: {
       nombre: 'Tecnología prohibida',
@@ -62,7 +62,7 @@ export const FACCIONES = {
     acento: 0x5dffb0,
     acentoCss: '#5dffb0',
     disparo: 0x8dffc8,
-    modelos: { caza: 'dispatcher', corbeta: 'bob', bombardero: 'executioner', crucero: 'zenith', portanaves: 'insurgent', acorazado: 'imperial', ...piezas('bob') },
+    modelos: { caza: 'dispatcher', corbeta: 'rlab-ranger', bombardero: 'rylek-skiff', crucero: 'rylek-galley', portanaves: 'rlab-skycruiser', acorazado: 'rylek-galleon', ...piezas('bob') },
     rasgo: { escudo: 0.8, efectos: [], estilo: '' },
   },
 }

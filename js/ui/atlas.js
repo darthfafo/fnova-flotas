@@ -25,6 +25,18 @@ const ESTRATEGIA = {
 }
 
 const MODELOS = {
+  'hgn-interceptor': 'Hiigaran Interceptor, de MrHohenheim',
+  'hgn-gunship': 'Hiigaran Pulsar Gunship, de MrHohenheim',
+  'hgn-bomber': 'Hiigaran Attack Bomber, de MrHohenheim',
+  'hgn-destroyer': 'Hiigaran Destroyer, de MrHohenheim',
+  'hgn-carrier': 'Hiigaran Carrier, de MrHohenheim',
+  'hgn-battlecruiser': 'Hiigaran Battlecruiser, de MrHohenheim',
+  'vgr-lance': 'Vaygr Lance Fighter, de MrHohenheim',
+  'vgr-corvette': 'Vaygr Laser Corvette, de MrHohenheim',
+  'vgr-bomber': 'Vaygr Bomber, de MrHohenheim',
+  'vgr-destroyer': 'Vaygr Destroyer, de MrHohenheim',
+  'vgr-carrier': 'Vaygr Carrier, de MrHohenheim',
+  'vgr-battlecruiser': 'Vaygr Battlecruiser, de MrHohenheim',
   'rylek-skiff': 'Fighter class Skiff, de Gwyvern',
   'rylek-galley': 'Scavenger Class Galley, de Gwyvern',
   'rylek-brig': 'Laboror Class Brig, de Gwyvern',

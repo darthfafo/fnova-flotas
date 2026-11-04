@@ -231,9 +231,9 @@ export class BatallaRemota extends Batalla {
   // Proyectil solo visual: el daño ya lo calculó el anfitrión.
   disparoDeUtileria(autor, objetivo, arma, impacta) {
     const p = PROYECTIL[arma] ?? PROYECTIL.laser
-    const origen = autor.pos.clone().addScaledVector(autor.adelante, autor.radio * 0.6)
+    const origen = autor.pos.clone().addScaledVector(autor.adelante, autor.forma.z * 0.9)
     const destino = objetivo.pos.clone()
-    if (!impacta) destino.add(new THREE.Vector3().randomDirection().multiplyScalar(objetivo.radio * 2 + 8))
+    if (!impacta) destino.add(new THREE.Vector3().randomDirection().multiply(objetivo.forma).multiplyScalar(1.6).applyQuaternion(objetivo.quat))
     const dir = destino.clone().sub(origen)
     const largo = dir.length()
     dir.divideScalar(largo || 1)

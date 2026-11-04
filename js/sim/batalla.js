@@ -14,6 +14,8 @@ const _q = new THREE.Quaternion()
 const _u = new THREE.Vector3()
 const _dirQ = new THREE.Vector3()
 const ORIGEN = new THREE.Vector3()
+const _f = new THREE.Vector3()
+const _fq = new THREE.Quaternion()
 const _l = new THREE.Vector3()
 const _c = new THREE.Vector3()
 
@@ -43,6 +45,7 @@ export class Nave {
     this.ultimoImpacto = -99
     this.viva = true
     this.radio = plantilla.radio
+    this.forma = plantilla.forma // semiejes: la nave es un elipsoide, no una esfera
     this.cola = plantilla.cola
     this.colorMotor = new THREE.Color(FACCIONES[batallon.faccion].acento).lerp(new THREE.Color(1, 1, 1), 0.25)
     this.armas = this.tipo.armas.map((a) => ({ ...a, enfriamiento: Math.random() * a.cadencia, objetivo: null }))
@@ -61,6 +64,31 @@ export class Nave {
 
   get adelante() {
     return this._adelante.copy(Z).applyQuaternion(this.quat)
+  }
+
+  // Un punto del mundo en las coordenadas de la nave.
+  local(punto, destino = _f) {
+    return destino.copy(punto).sub(this.pos).applyQuaternion(_fq.copy(this.quat).invert())
+  }
+
+  // Cuántas veces el tamaño de la nave está el punto: menos de 1 es adentro.
+  escalaForma(punto) {
+    const l = this.local(punto)
+    const f = this.forma
+    return Math.hypot(l.x / f.x, l.y / f.y, l.z / f.z)
+  }
+
+  // Distancia aproximada de un punto al casco (0 si está adentro).
+  distanciaCasco(punto) {
+    const s = this.escalaForma(punto)
+    return s <= 1 ? 0 : (_f.length() * (s - 1)) / s
+  }
+
+  // Hasta dónde llega el casco desde el centro en una dirección (unitaria).
+  extension(dir) {
+    const l = _f.copy(dir).applyQuaternion(_fq.copy(this.quat).invert())
+    const f = this.forma
+    return 1 / Math.hypot(l.x / f.x, l.y / f.y, l.z / f.z)
   }
 }
 
@@ -419,8 +447,8 @@ export class Batalla {
       portanaves.escuadrilla = b
     }
     const p = this.plantilla(faccion, h.tipo)
-    const r = portanaves.radio
-    const pos = _w.set((Math.random() - 0.5) * r * 0.3, -r * 0.12, -r * 0.15).applyQuaternion(portanaves.quat).add(portanaves.pos)
+    const f = portanaves.forma
+    const pos = _w.set((Math.random() - 0.5) * f.x, -f.y * 0.5, -f.z * 0.3).applyQuaternion(portanaves.quat).add(portanaves.pos)
     const nave = new Nave(b, h.tipo, p, pos, portanaves.quat)
     nave.lanzada = true
     nave.velocidad = nave.velocidadMax * 0.6
@@ -801,13 +829,20 @@ export class Batalla {
       for (let j = i + 1; j < naves.length; j++) {
         const b = naves[j]
         if (!b.viva) continue
-        const min = (a.radio + b.radio) * 0.9
+        let min = (a.radio + b.radio) * 0.9
         const dx = a.pos.x - b.pos.x
         const dy = a.pos.y - b.pos.y
         const dz = a.pos.z - b.pos.z
         const d2 = dx * dx + dy * dy + dz * dz
         if (d2 >= min * min || d2 < 1e-6) continue
         const d = Math.sqrt(d2)
+        // Cerca de una capital cuenta la forma: se puede pasar al lado de una
+        // nave larga y angosta sin chocar con una esfera invisible.
+        if (a.esCapital || b.esCapital) {
+          _u.set(dx / d, dy / d, dz / d)
+          min = (a.extension(_u) + b.extension(_u)) * 0.95
+          if (d >= min) continue
+        }
         const empuje = ((min - d) / d) * Math.min(1, dt * 4)
         // La nave más chica es la que se corre; las estructuras no se mueven.
         const pa = !a.tipo.velocidad ? 0 : !b.tipo.velocidad ? 1 : b.radio / (a.radio + b.radio)
@@ -879,8 +914,13 @@ export class Batalla {
     const origen = new THREE.Vector3()
     if (arma.montaje) {
       const tp = this.plantilla(n.batallon.faccion, n.tipo.clave)
-      origen.set(arma.montaje[0] * tp.ancho, arma.montaje[1] * tp.alto, arma.montaje[2] * n.tipo.largo).applyQuaternion(n.quat).add(n.pos)
-    } else origen.copy(n.pos).addScaledVector(n.adelante, n.radio * 0.6)
+      origen.set(arma.montaje[0] * tp.ancho, arma.montaje[1] * tp.alto, arma.montaje[2] * n.tipo.largo)
+      // Si la torreta quedara en el aire, se la trae al casco.
+      const f = n.forma
+      const s = Math.hypot(origen.x / f.x, origen.y / f.y, origen.z / f.z)
+      if (s > 1) origen.divideScalar(s)
+      origen.applyQuaternion(n.quat).add(n.pos)
+    } else origen.copy(n.pos).addScaledVector(n.adelante, n.forma.z * 0.9)
     let acierto = PUNTERIA[arma.tipo][obj.tipo.clase]
     // La agilidad esquiva disparos apuntados, no la metralla del flak.
     if (arma.tipo !== 'flak') acierto *= obj.tipo.agilidad ?? 1
@@ -895,8 +935,11 @@ export class Batalla {
     if (proximidad) {
       apunta.addScaledVector(obj.adelante, obj.velocidad * tVuelo)
       apunta.add(_v.randomDirection().multiplyScalar(impacta ? Math.random() * 6 : 10 + Math.random() * 18))
-    } else if (!impacta)
-      apunta.add(_v.set(Math.random() - 0.5, Math.random() - 0.5, Math.random() - 0.5).normalize().multiplyScalar(obj.radio * 2 + 8))
+    } else if (!impacta) {
+      // Pasa cerca del casco, según su forma.
+      _v.randomDirection().multiply(obj.forma).multiplyScalar(1.6).addScaledVector(_w.randomDirection(), 8)
+      apunta.add(_v.applyQuaternion(obj.quat))
+    }
     n.ultimoDisparo = this.tiempo
     this.delatar(n)
     // Un asteroide en el medio se come el disparo.
@@ -924,6 +967,8 @@ export class Batalla {
       grosor: p.grosor,
       color: new THREE.Color(arma.tipo === 'torpedo' ? 0xffd080 : faccion.disparo).multiplyScalar(arma.tipo === 'cañon' ? 2.2 : 1.6),
       objetivo: impacta && !proximidad && !contraRoca ? obj : null,
+      // Punto del casco al que va: en una capital, cualquier parte de su largo.
+      blanco: obj.esCapital ? new THREE.Vector3().randomDirection().multiply(obj.forma).multiplyScalar(0.7) : new THREE.Vector3(),
       daño,
       autor: n,
       // Los que fallan se apagan poco después de pasar al blanco: si siguieran
@@ -951,9 +996,9 @@ export class Batalla {
           p.vida = Math.min(p.vida, 0.2)
         } else {
           // Los que van a pegar persiguen al blanco (corrige el adelanto).
-          const hacia = _v.copy(o.pos).sub(p.pos)
+          const hacia = _v.copy(p.blanco).applyQuaternion(o.quat).add(o.pos).sub(p.pos)
           const d = hacia.length()
-          if (d <= Math.max(o.radio * 0.7, p.velocidad * dt)) {
+          if (d <= p.velocidad * dt || o.escalaForma(p.pos) <= 1) {
             this.impactar(p, o)
             lista.splice(i, 1)
             continue
@@ -990,9 +1035,9 @@ export class Batalla {
     if (this.terreno.asteroides.length) this.dañarRocasCerca(p.pos, RADIO, p.daño * 0.5)
     for (const o of this.naves) {
       if (!o.viva || o.equipo === p.autor.equipo || o.esCapital) continue
-      const d = o.pos.distanceTo(p.pos)
-      if (d > RADIO + o.radio) continue
-      const f = 1 - Math.max(0, d - o.radio) / RADIO
+      const d = o.distanciaCasco(p.pos)
+      if (d > RADIO) continue
+      const f = 1 - d / RADIO
       this.impactar({ ...p, daño: p.daño * (0.25 + 0.75 * f), pos: p.pos }, o)
     }
   }

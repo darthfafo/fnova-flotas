@@ -316,10 +316,11 @@ export class Escudos {
     b.nave = nave
     b.t = 0.35
     b.malla.visible = true
-    b.malla.scale.setScalar(nave.radio * 1.15)
+    // El escudo envuelve la forma de la nave.
+    b.malla.scale.copy(nave.forma).multiplyScalar(1.3)
     b.malla.material.uniforms.c.value.copy(color)
-    // Dirección del impacto en coordenadas locales de la esfera.
-    b.malla.material.uniforms.impacto.value.copy(desde).sub(nave.pos).normalize()
+    // Dirección del impacto en coordenadas locales del escudo.
+    b.malla.material.uniforms.impacto.value.copy(nave.local(desde, _v)).divide(nave.forma).normalize()
   }
 
   actualizar(dt) {
@@ -332,6 +333,7 @@ export class Escudos {
         continue
       }
       b.malla.position.copy(b.nave.pos)
+      b.malla.quaternion.copy(b.nave.quat)
       b.malla.material.uniforms.a.value = b.t / 0.35
     }
   }
