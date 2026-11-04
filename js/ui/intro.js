@@ -11,7 +11,7 @@ const PROLOGO = [
   { texto: 'Tres siglos después, dos Órdenes se disputan lo que quedó entre las estrellas.' },
   { texto: 'Los <span class="g">Guardianes</span> juraron hacer cumplir la prohibición.' },
   { texto: 'Los <span class="i">Inquisidores</span> creen que ese poder puede domarse.' },
-  { texto: 'Los duelos ya no alcanzan.<br><b>Las flotas despiertan.</b>', pausa: 1.2 },
+  { texto: 'La guerra vuelve a las estrellas.<br><b>Las flotas despiertan.</b>', pausa: 1.2 },
 ]
 const DURACION_LINEA = 3.8
 

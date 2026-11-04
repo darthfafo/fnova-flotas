@@ -21,7 +21,7 @@ export const FACCIONES = {
     modelos: { caza: 'hgn-interceptor', corbeta: 'hgn-bomber', bombardero: 'hgn-gunship', crucero: 'hgn-destroyer', portanaves: 'hgn-carrier', acorazado: 'hgn-battlecruiser', ...piezas('rylek-brig') },
     // Rasgo de batalla: aguantan más, pegan igual, se mueven un poco más lento.
     rasgo: {
-      nombre: 'Disciplina del Crisol',
+      nombre: 'Disciplina de la Orden',
       escudo: 1.15,
       regenEscudo: 1.3,
       velocidad: 0.93,
@@ -48,7 +48,7 @@ export const FACCIONES = {
       velocidad: 1.08,
       escudo: 0.88,
       efectos: ['+14% de daño en todas las armas', '+8% de velocidad', '−12% de escudo'],
-      estilo: 'Golpean primero y ganan los duelos de naves capitales. Sufren contra enjambres que se reparan.',
+      estilo: 'Golpean primero y dominan los combates entre naves capitales. Sufren contra enjambres que se reparan.',
     },
   },
   // Maquinaria común tomada por la Mente: solo aparece en la campaña.
@@ -184,7 +184,7 @@ export const TIPOS = {
       { tipo: 'cañon', daño: 45, cadencia: 1.6, alcance: 620, montaje: [0, 0.3, -0.3] },
     ],
     ventajaGeneral: 1.25,
-    rol: 'Nave capital definitiva: +25% de daño contra todo y gana el duelo contra el Crucero. Necesita escolta contra Bombarderos.',
+    rol: 'Nave capital definitiva: +25% de daño contra todo y se impone al Crucero. Necesita escolta contra Bombarderos.',
   },
 }
 

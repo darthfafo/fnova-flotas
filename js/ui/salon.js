@@ -243,7 +243,7 @@ export class Salon {
     for (const b of document.querySelectorAll('[data-salon-dif]')) b.classList.toggle('activo', b.dataset.salonDif === this.dificultad)
     const tabla = $('#salon-tabla')
     const pie = $('#salon-pie')
-    tabla.innerHTML = '<div class="salon-vacio">Consultando los archivos del Crisol…</div>'
+    tabla.innerHTML = '<div class="salon-vacio">Consultando los archivos…</div>'
     pie.innerHTML = ''
     let filas
     try {
