@@ -934,3 +934,6 @@ html.tactil .grupo-comandos:not(.solo-tactil):not(.solo-mover) .btn.comando b { 
   .atlas-ficha p { font-size: 0.8rem; }
   .atlas-barra { grid-template-columns: 70px 1fr 40px; font-size: 0.72rem; }
 }
+
+.motivo-cuenta { color: var(--ambar); margin: 0 0 10px; }
+#btn-armar-flota { margin-top: 6px; }

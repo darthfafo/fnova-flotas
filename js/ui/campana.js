@@ -1,33 +1,36 @@
 // El tablero de la campaña: la ruta de escenarios de cada Orden, con el
 // avance guardado en el navegador. Cada escenario sigue el camino relato,
-// partida, relato y crónica; al ganar se abre el siguiente.
+// partida, relato y crónica; al ganar se abre el siguiente. Hace falta cuenta:
+// el avance se guarda ahí, con una copia en el navegador por si se corta la red.
 import { FACCIONES } from '../datos.js'
 import { ESCENARIOS, mision } from '../campana/escenarios.js'
 import { mostrarPantalla } from './menus.js'
 
 const $ = (s) => document.querySelector(s)
-const CLAVE = 'campana'
 const ORDENES = ['guardianes', 'inquisidores']
 
-function leer() {
+function leer(clave) {
   try {
-    return JSON.parse(localStorage.getItem(CLAVE)) ?? {}
+    return JSON.parse(localStorage.getItem(clave)) ?? {}
   } catch {
     return {}
   }
 }
 
 export class Campana {
-  constructor({ alJugar, faccionFija }) {
+  constructor({ alJugar, faccionFija, cuenta, salon }) {
     this.alJugar = alJugar
     this.faccionFija = faccionFija
-    this.avance = leer() // facción → cantidad de escenarios ganados
+    this.cuenta = cuenta
+    this.salon = salon
+    this.avance = {} // facción → cantidad de escenarios ganados
+    cuenta.alCambiar(() => this.cargar())
     this.faccion = 'guardianes'
     this.elegido = 0
     document.body.addEventListener('click', (e) => {
       const el = e.target.closest('[data-accion]')
       const a = el?.dataset.accion
-      if (a === 'campana') this.abrir()
+      if (a === 'campana') this.entrar()
       else if (a === 'campana-faccion') this.cambiarFaccion(el.dataset.faccion)
       else if (a === 'campana-escenario') this.elegir(Number(el.dataset.i))
       else if (a === 'campana-jugar') this.jugar()
@@ -39,6 +42,34 @@ export class Campana {
 
   ganados(f = this.faccion) {
     return Math.min(this.avance[f] ?? 0, ESCENARIOS.length)
+  }
+
+  // Lo mejor de la cuenta y de la copia local. Si alguien jugó antes de que
+  // se pidiera cuenta, ese avance pasa al comandante que ingrese.
+  cargar() {
+    const id = this.cuenta.usuario?.id
+    this.avance = {}
+    if (!id) return
+    const anterior = leer('campana')
+    for (const f of ORDENES) this.avance[f] = Math.max(this.cuenta.campana[f] ?? 0, leer(`campana-${id}`)[f] ?? 0, anterior[f] ?? 0)
+    try {
+      localStorage.removeItem('campana')
+    } catch {}
+  }
+
+  entrar() {
+    if (this.cuenta.conectado) return this.abrir()
+    this.salon.pedirCuenta('La campaña guarda tu avance en tu cuenta de comandante.', () => {
+      this.cargar()
+      this.abrir()
+    })
+  }
+
+  guardar() {
+    try {
+      localStorage.setItem(`campana-${this.cuenta.usuario?.id}`, JSON.stringify(this.avance))
+    } catch {}
+    this.cuenta.guardarCampana(this.avance).catch((e) => console.warn('No se pudo guardar la campaña en la cuenta:', e))
   }
 
   abrir() {
@@ -107,9 +138,7 @@ export class Campana {
     const e = ESCENARIOS[this.actual]
     if (resultado === 'victoria') {
       this.avance[this.faccion] = Math.max(this.ganados(), this.actual + 1)
-      try {
-        localStorage.setItem(CLAVE, JSON.stringify(this.avance))
-      } catch {}
+      this.guardar()
       this.abrir()
       this.elegido = Math.min(this.ganados(), ESCENARIOS.length - 1)
       this.dibujar()

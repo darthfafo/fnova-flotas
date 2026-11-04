@@ -84,6 +84,8 @@ const menus = new Menus({
 })
 
 const campana = new Campana({
+  cuenta,
+  salon,
   faccionFija: () => cuenta.perfil?.faccion ?? null,
   alJugar: (def, faccion) => iniciarBatalla({ ...menus.config, faccion, dificultad: 'normal', mapa: def.mapa, flota: def.jugador.flota, presupuesto: 0 }, { mision: def }),
 })

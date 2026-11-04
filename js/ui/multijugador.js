@@ -66,7 +66,7 @@ export class Multijugador {
 
   abrir() {
     if (!LOCAL && !this.cuenta.conectado) {
-      this.salon.abrirCuenta()
+      this.salon.pedirCuenta('Para jugar contra otros comandantes necesitás una cuenta.', () => this.abrir())
       return
     }
     this.refrescarSelectores()

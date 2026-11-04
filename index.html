@@ -60,13 +60,13 @@
       <div class="titulo-flotas"><span>Universo FNOVA</span></div>
       <p class="lema-portada" id="lema-portada">Estrategia de guerra espacial en 3D. Armá tu flota y comandala en una batalla en tiempo real.</p>
       <ul class="gancho">
-        <li><b>Cada nave tiene su presa</b><span>Cazas, bombarderos y acorazados que se contrarrestan entre sí</span></li>
-        <li><b>El terreno pelea</b><span>Rocas que frenan disparos, nebulosas para emboscar</span></li>
-        <li><b>IA o amigos</b><span>Subí al Salón de la Fama o desafiá a otro comandante</span></li>
+        <li><b>Batalla rápida</b><span>Elegí tu Orden y a pelear en segundos. No necesita cuenta.</span></li>
+        <li><b>Campaña</b><span>Cinco escenarios por Orden: la misma historia desde cada bando. Con cuenta, tu avance queda guardado.</span></li>
+        <li><b>Multijugador</b><span>Uno contra uno en tiempo real contra otro comandante. Necesita cuenta.</span></li>
       </ul>
       <div class="botonera vertical" id="botones-titulo">
-        <button class="btn grande" data-accion="campana">Campaña</button>
-        <button class="btn" data-accion="nueva">Jugar</button>
+        <button class="btn grande" data-accion="nueva">Jugar</button>
+        <button class="btn" data-accion="campana">Campaña</button>
         <button class="btn" data-accion="multijugador" title="Batallas contra otros comandantes">Multijugador</button>
         <button class="btn" data-accion="tutorial">Tutorial</button>
       </div>
@@ -85,6 +85,7 @@
   <section id="pantalla-faccion" class="pantalla">
     <h2 class="encabezado">Elegí tu facción</h2>
     <p class="faccion-aviso" id="faccion-aviso"></p>
+    <button class="enlace" id="btn-armar-flota" data-accion="armar-flota">Prefiero armar mi flota y elegir el mapa ›</button>
     <div class="facciones" id="lista-facciones"></div>
     <div class="botonera"><button class="btn" data-accion="volver-titulo">Volver</button></div>
   </section>

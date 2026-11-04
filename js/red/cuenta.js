@@ -116,6 +116,19 @@ export class Cuenta {
     this.avisar()
   }
 
+  // Avance de la campaña. Va en los metadatos del usuario de Supabase, así que
+  // no hace falta ninguna tabla nueva.
+  get campana() {
+    return this.usuario?.user_metadata?.campana ?? {}
+  }
+
+  async guardarCampana(campana) {
+    const sb = await supabase()
+    const { data, error } = await sb.auth.updateUser({ data: { campana } })
+    if (error) throw new Error(traducir(error))
+    this.usuario = data.user
+  }
+
   // Guarda el resultado de una batalla. Devuelve el puesto en el ranking de
   // esa dificultad (o null si fue derrota).
   async guardarResultado({ informe, config, mapa, faccion }) {

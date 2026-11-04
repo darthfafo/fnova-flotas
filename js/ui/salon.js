@@ -19,6 +19,11 @@ export class Salon {
 
     cuenta.alCambiar(() => {
       this.refrescarBoton()
+      if (cuenta.conectado && this.alIngresar) {
+        const seguir = this.alIngresar
+        this.cerrarCuenta()
+        return seguir()
+      }
       if ($('#pantalla-cuenta').classList.contains('visible')) this.dibujarCuenta()
     })
     document.body.addEventListener('click', (e) => {
@@ -66,6 +71,14 @@ export class Salon {
 
   // --- Ventana de cuenta ------------------------------------------------------
 
+  // Para lo que necesita cuenta: explica por qué y, al ingresar, sigue.
+  pedirCuenta(motivo, alIngresar) {
+    this.motivo = motivo
+    this.alIngresar = alIngresar
+    this.modo = 'crear'
+    this.abrirCuenta()
+  }
+
   abrirCuenta() {
     // Una cuenta sin perfil (registro cortado a la mitad) pasa directo a elegir nombre.
     if (this.cuenta.usuario && !this.cuenta.perfil) this.modo = 'perfil'
@@ -76,6 +89,8 @@ export class Salon {
 
   cerrarCuenta() {
     $('#pantalla-cuenta').classList.remove('visible')
+    this.motivo = null
+    this.alIngresar = null
   }
 
   dibujarCuenta() {
@@ -98,6 +113,7 @@ export class Salon {
     const soloPerfil = this.modo === 'perfil'
     c.innerHTML = `
       <div class="encabezado">${soloPerfil ? 'Elegí tu nombre' : crear ? 'Nuevo comandante' : 'Ingresar'}</div>
+      ${this.motivo ? `<p class="nota motivo-cuenta">${this.motivo}</p>` : ''}
       ${soloPerfil ? '' : `<div class="selector tabs-cuenta">
         <button type="button" class="btn ${crear ? '' : 'activo'}" data-accion="modo-cuenta" data-modo="ingresar">Ingresar</button>
         <button type="button" class="btn ${crear ? 'activo' : ''}" data-accion="modo-cuenta" data-modo="crear">Crear cuenta</button>
@@ -106,7 +122,7 @@ export class Salon {
         ${crear ? `<label>Nombre de comandante<input name="nombre" maxlength="20" minlength="3" required autocomplete="nickname" placeholder="Como te van a ver en el ranking" /></label>
         <label>Facción<select name="faccion" id="select-faccion">${Object.values(FACCIONES).filter((f) => !f.soloCampana).map((f) => `<option value="${f.clave}">${f.nombre}</option>`).join('')}</select></label>
         <div class="nota-faccion" id="nota-faccion" style="--color:${FACCIONES.guardianes.acentoCss}">${bloqueRasgo(FACCIONES.guardianes)}</div>
-        <p class="nota">Tu facción define tus naves y su rasgo en batalla. Con <b>Partida rápida</b> podés probar la otra cuando quieras.</p>` : ''}
+        <p class="nota">Tu facción define tus naves y su rasgo en batalla. Con <b>Jugar</b> podés probar la otra cuando quieras.</p>` : ''}
         ${soloPerfil ? '' : `<label>Email<input name="email" type="email" required autocomplete="email" /></label>
         <label>Contraseña<input name="contraseña" type="password" minlength="6" required autocomplete="${crear ? 'new-password' : 'current-password'}" placeholder="${crear ? 'Al menos 6 caracteres' : ''}" /></label>`}
         ${CAPTCHA_TURNSTILE && !soloPerfil ? '<div class="captcha" id="captcha"></div>' : ''}

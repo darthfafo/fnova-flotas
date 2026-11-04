@@ -30,12 +30,8 @@ export class Menus {
     document.body.addEventListener('click', (e) => {
       const a = e.target.closest('[data-accion]')?.dataset.accion
       if (!a) return
-      if (a === 'nueva') this.jugar()
-      else if (a === 'rapida') {
-        this.modo = 'rapida'
-        $('#faccion-aviso').innerHTML = '<b>Partida rápida:</b> elegí cualquier facción y entrás directo a la batalla con una flota sugerida.'
-        mostrarPantalla('pantalla-faccion')
-      }
+      if (a === 'nueva') this.rapida()
+      else if (a === 'armar-flota') this.jugar()
       else if (a === 'tutorial') alTutorial()
       else if (a === 'controles') alAbrirAyuda(false)
       else if (a === 'volver-titulo' || a === 'menu') mostrarPantalla('pantalla-titulo')
@@ -49,10 +45,19 @@ export class Menus {
     })
   }
 
-  // "Jugar": con sesión iniciada se juega con la facción del comandante; sin
-  // sesión se elige facción.
+  // "Jugar": batalla rápida con cualquier facción, flota sugerida y mapa al azar.
+  rapida() {
+    this.modo = 'rapida'
+    $('#faccion-aviso').innerHTML = '<b>Batalla rápida:</b> elegí tu Orden y entrás directo a la batalla con una flota sugerida.'
+    $('#btn-armar-flota').hidden = false
+    mostrarPantalla('pantalla-faccion')
+  }
+
+  // Armar la flota a mano: con sesión iniciada se juega con la facción del
+  // comandante; sin sesión se elige facción.
   jugar() {
     this.modo = 'normal'
+    $('#btn-armar-flota').hidden = true
     const fija = this.faccionFija()
     if (fija) {
       this.config.faccion = fija
