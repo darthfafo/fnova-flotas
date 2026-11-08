@@ -14,7 +14,7 @@ export class Menus {
   // faccionFija: devuelve la facción del comandante con sesión iniciada (o null).
   constructor({ alCombatir, alAbrirAyuda, alTutorial, faccionFija = () => null }) {
     this.faccionFija = faccionFija
-    this.modo = 'normal' // 'normal' (tu comandante) o 'rapida' (cualquier facción, sin armar flota)
+    this.modo = 'normal' // 'normal' (armar la flota) o 'rapida' (Jugar: directo a la batalla)
     this.config = {
       faccion: 'guardianes',
       dificultad: 'normal',
@@ -32,7 +32,6 @@ export class Menus {
       const a = e.target.closest('[data-accion]')?.dataset.accion
       if (!a) return
       if (a === 'nueva') this.rapida()
-      else if (a === 'armar-flota') this.jugar()
       else if (a === 'tutorial') alTutorial()
       else if (a === 'controles') alAbrirAyuda(false)
       else if (a === 'volver-titulo' || a === 'menu') mostrarPantalla('pantalla-titulo')
@@ -46,19 +45,30 @@ export class Menus {
     })
   }
 
-  // "Jugar": batalla rápida con cualquier facción, flota sugerida y mapa al azar.
+  // "Jugar": batalla rápida directa, sin elegir facción (a quien recién llega
+  // esa elección no le dice nada). Con sesión iniciada se juega con la Orden del
+  // comandante; si no, con los Guardianes. Flota sugerida y mapa al azar.
   rapida() {
     this.modo = 'rapida'
-    $('#faccion-aviso').innerHTML = '<b>Batalla rápida:</b> elegí tu Orden y entrás directo a la batalla con una flota sugerida.'
-    $('#btn-armar-flota').hidden = false
-    mostrarPantalla('pantalla-faccion')
+    const f = this.faccionFija() ?? 'guardianes'
+    this.config.faccion = f
+    document.documentElement.style.setProperty('--acento', FACCIONES[f].acentoCss)
+    this.sugerida()
+    mostrarGuia(
+      () => this.alCombatir({ ...this.config, mapa: 'azar' }),
+      () => {
+        // Desde la guía: armar la flota a mano con la misma facción.
+        this.modo = 'normal'
+        this.refrescarFlota()
+        mostrarPantalla('pantalla-flota')
+      },
+    )
   }
 
   // Armar la flota a mano: con sesión iniciada se juega con la facción del
   // comandante; sin sesión se elige facción.
   jugar() {
     this.modo = 'normal'
-    $('#btn-armar-flota').hidden = true
     const fija = this.faccionFija()
     if (fija) {
       this.config.faccion = fija
@@ -97,11 +107,6 @@ export class Menus {
       t.addEventListener('click', () => {
         this.config.faccion = f.clave
         document.documentElement.style.setProperty('--acento', f.acentoCss)
-        if (this.modo === 'rapida') {
-          // Partida rápida: flota sugerida, mapa al azar y, antes, la guía de controles.
-          this.sugerida()
-          return mostrarGuia(() => this.alCombatir({ ...this.config, mapa: 'azar' }))
-        }
         this.refrescarFlota()
         mostrarPantalla('pantalla-flota')
       })

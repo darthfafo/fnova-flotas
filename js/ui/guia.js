@@ -33,7 +33,7 @@ const TOUCHPAD = [
 const tarjetas = (lista) =>
   lista.map(([icono, titulo, texto]) => `<div class="guia-tarjeta"><i>${icono}</i><b>${titulo}</b><span>${texto}</span></div>`).join('')
 
-export function mostrarGuia(alSeguir) {
+export function mostrarGuia(alSeguir, alArmar) {
   let vista = false
   try {
     vista = localStorage.getItem(CLAVE) === 'si'
@@ -46,6 +46,10 @@ export function mostrarGuia(alSeguir) {
        <p class="nota">Teclado: <b>M</b> mover en 3D · <b>A</b> atacar · <b>F</b> seguir la selección · <b>Espacio</b> vista táctica · <b>P</b> pausa táctica · <b>Esc</b> todos los controles.</p>`
   const pantalla = $('#pantalla-guia')
   pantalla.classList.add('visible')
+  $('#guia-armar').onclick = () => {
+    pantalla.classList.remove('visible')
+    alArmar()
+  }
   $('#guia-seguir').onclick = () => {
     if ($('#guia-no-mostrar').checked)
       try {
