@@ -1,5 +1,7 @@
-// Selección y órdenes. Todo se puede hacer con touchpad + teclado:
-//   clic: seleccionar · arrastrar: recuadro · clic con dos dedos: orden
+// Selección y órdenes con mouse, touchpad y teclado:
+//   clic: seleccionar · arrastrar: recuadro · doble clic en el espacio: llevar la cámara
+//   clic derecho (o con dos dedos): orden · arrastrar con clic derecho: girar la cámara
+//   arrastrar con la rueda apretada: desplazar la cámara
 //   M: mover en 3D con el disco de Homeworld (Shift = altura)
 //   A: atacar · S: detener · F: enfocar · Z X C V: formación · T: táctica
 import * as THREE from 'three'
@@ -41,11 +43,8 @@ export class Entrada {
       pointerdown: sinToques((e) => this.alApretar(e)),
       pointermove: sinToques((e) => this.alMover(e)),
       pointerup: sinToques((e) => this.alSoltar(e)),
-      contextmenu: (e) => {
-        // Mantener apretado en una pantalla táctil también dispara contextmenu.
-        if (performance.now() - (window.__ultimoToque ?? -1e9) < 1500) return e.preventDefault()
-        this.alClicSecundario(conCoordenadas(e, elemento))
-      },
+      // El clic derecho se resuelve al soltar (para distinguirlo de un arrastre).
+      contextmenu: (e) => e.preventDefault(),
     }
     for (const [k, f] of Object.entries(this.manejadores)) elemento.addEventListener(k, f)
     this.teclaAbajo = (e) => !this.inactiva && this.alTecla(e)
@@ -145,16 +144,40 @@ export class Entrada {
   // --- Puntero ------------------------------------------------------------
 
   alApretar(e) {
-    if (!this.activa || e.button !== 0) return
+    if (!this.activa) return
     try {
       this.el.setPointerCapture(e.pointerId)
     } catch {}
+    // Clic derecho (o Ctrl + clic en Mac): orden si se suelta quieto, girar si se arrastra.
+    if (e.button === 2 || (e.button === 0 && e.ctrlKey)) {
+      this.giro = { x: e.offsetX, y: e.offsetY, x0: e.offsetX, y0: e.offsetY, movio: false }
+      return
+    }
+    if (e.button === 1) {
+      e.preventDefault()
+      this.paneo = { x: e.offsetX, y: e.offsetY }
+      return
+    }
+    if (e.button !== 0) return
     this.arrastre = { x0: e.offsetX, y0: e.offsetY, x: e.offsetX, y: e.offsetY, activo: false, shift: e.shiftKey }
   }
 
   alMover(e) {
     this.cursor.x = e.offsetX
     this.cursor.y = e.offsetY
+    if (this.giro) {
+      const g = this.giro
+      if (!g.movio && Math.hypot(e.offsetX - g.x0, e.offsetY - g.y0) > 5) g.movio = true
+      if (g.movio) this.orbital.girar(e.offsetX - g.x, e.offsetY - g.y)
+      g.x = e.offsetX
+      g.y = e.offsetY
+      return
+    }
+    if (this.paneo) {
+      this.orbital.desplazar(e.offsetX - this.paneo.x, e.offsetY - this.paneo.y)
+      this.paneo = { x: e.offsetX, y: e.offsetY }
+      return
+    }
     if (this.movimiento) this.actualizarMovimiento(e)
     const a = this.arrastre
     if (!a) return
@@ -164,6 +187,16 @@ export class Entrada {
   }
 
   alSoltar(e) {
+    if (this.giro) {
+      const g = this.giro
+      this.giro = null
+      if (!g.movio) this.alClicSecundario(e)
+      return
+    }
+    if (e.button === 1) {
+      this.paneo = null
+      return
+    }
     if (e.button !== 0) return
     const a = this.arrastre
     this.arrastre = null
@@ -207,7 +240,18 @@ export class Entrada {
       } else this.seleccionar([n.batallon], a.shift)
       this.ultimoClic = { t: ahora, b: n.batallon }
       this.alOrden?.('seleccion')
-    } else if (!a.shift) this.seleccionar([])
+    } else {
+      // Doble clic en el espacio vacío: la cámara va ahí.
+      if (!n && ahora - this.ultimoClic.t < 350 && this.ultimoClic.b === 'vacio') {
+        // Cerca del horizonte el punto queda lejísimos: el salto tiene un tope.
+        const p = this.puntoEnPlano(e.offsetX, e.offsetY, this.orbital.foco.y)
+        const salto = p.sub(this.orbital.foco).clampLength(0, this.orbital.dist * 2.5)
+        this.orbital.focoDeseado.copy(this.orbital.foco).add(salto)
+        this.orbital.seguir = null
+      }
+      this.ultimoClic = { t: ahora, b: n ? null : 'vacio' }
+      if (!a.shift) this.seleccionar([])
+    }
   }
 
   alClicSecundario(e) {
@@ -406,6 +450,7 @@ function conCoordenadas(e, el) {
     button: e.button,
     pointerId: e.pointerId,
     shiftKey: e.shiftKey,
+    ctrlKey: e.ctrlKey,
     offsetX: e.clientX - r.left,
     offsetY: e.clientY - r.top,
     preventDefault: () => e.preventDefault(),

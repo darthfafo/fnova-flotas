@@ -186,6 +186,7 @@ document.getElementById('hud-comandos').addEventListener('click', (e) => {
   if (!b || !partida) return
   const en = partida.entrada
   // Botones extra de la pantalla táctil.
+  if (b.dataset.cmd === 'mas') return document.body.classList.toggle('comandos-mas')
   if (b.dataset.cmd === 'todos') return en.seleccionar(partida.batalla.batallones.filter((x) => x.equipo === JUGADOR))
   if (b.dataset.cmd === 'ninguno') return en.seleccionar([])
   if (b.dataset.cmd === 'subir' || b.dataset.cmd === 'bajar') return partida.tactil.cambiarAltura(b.dataset.cmd === 'subir' ? 1 : -1)
@@ -502,7 +503,7 @@ function terminarBatalla() {
   for (const n of partida.batalla.naves) if (n.malla) escena.remove(n.malla)
   partida.entrada.destruir()
   partida.tactil.destruir()
-  document.body.classList.remove('en-batalla', 'ver-flota', 'modo-mover')
+  document.body.classList.remove('en-batalla', 'ver-flota', 'modo-mover', 'comandos-mas')
   partida.terreno3d.destruir()
   partida.tutorial?.destruir()
   sonido.ambiente(false)

@@ -1,9 +1,9 @@
-// Cámara orbital estilo Homeworld, pensada para touchpad:
-//   deslizar con dos dedos  → girar alrededor del foco
-//   pellizcar               → zoom (el navegador lo manda como wheel + ctrlKey)
-//   flechas                 → desplazar el foco · Q/E girar · +/- zoom
-// Con una rueda de mouse clásica (saltos grandes y solo verticales) la
-// rueda hace zoom, para que también se pueda jugar con mouse.
+// Cámara orbital estilo Homeworld.
+//   touchpad: deslizar con dos dedos → girar · pellizcar → zoom (el navegador
+//             lo manda como wheel + ctrlKey) · Shift o Alt + deslizar → desplazar
+//   mouse:    rueda → zoom · arrastrar con clic derecho → girar · con la rueda
+//             apretada → desplazar (los arrastres los maneja entrada.js)
+//   teclado:  flechas → desplazar · Q/E girar · +/- zoom
 import * as THREE from 'three'
 
 export class CamaraOrbital {
@@ -29,6 +29,9 @@ export class CamaraOrbital {
         if (e.ctrlKey) {
           // Pellizco del touchpad.
           this.zoom(Math.exp(e.deltaY * 0.012))
+        } else if (e.shiftKey || e.altKey) {
+          // Desplazar por el mapa: el contenido sigue a los dedos.
+          this.desplazar(-e.deltaX, -e.deltaY)
         } else if (e.deltaMode === 1 || (e.deltaX === 0 && Math.abs(e.deltaY) >= 50 && Number.isInteger(e.deltaY))) {
           // Rueda de mouse.
           this.zoom(Math.exp(Math.sign(e.deltaY) * 0.18))
@@ -55,6 +58,20 @@ export class CamaraOrbital {
 
   sacudir(fuerza) {
     this.temblor = Math.min(30, this.temblor + fuerza)
+  }
+
+  // Mueve el foco por el plano, como arrastrar el mapa: dx y dy en píxeles.
+  desplazar(dx, dy) {
+    const escala = this.dist / 500
+    const adelante = new THREE.Vector3(-Math.sin(this.yaw), 0, -Math.cos(this.yaw))
+    const derecha = new THREE.Vector3(-adelante.z, 0, adelante.x)
+    this.focoDeseado.addScaledVector(derecha, -dx * escala).addScaledVector(adelante, dy * escala)
+    this.seguir = null
+  }
+
+  girar(dx, dy) {
+    this.yaw -= dx * 0.006
+    this.pitch = THREE.MathUtils.clamp(this.pitch + dy * 0.005, -1.45, 1.45)
   }
 
   zoom(factor) {

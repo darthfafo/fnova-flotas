@@ -18,6 +18,7 @@ export class Hud {
     this.lienzo = $('#superposicion')
     this.g = this.lienzo.getContext('2d')
     this.sensores = false
+    this.compacto = document.documentElement.classList.contains('tactil')
     this.relojDom = 0
     this.avisoT = 0
     this.redimensionar()
@@ -39,7 +40,8 @@ export class Hud {
   estadoTiempo(pausaTactica, velocidad) {
     $('#hud-pausa').hidden = !pausaTactica
     $('#btn-pausa-tactica').classList.toggle('activo', pausaTactica)
-    $('#btn-pausa-tactica').textContent = pausaTactica ? '▶ Seguir' : '❚❚ Pausa'
+    const corto = document.documentElement.classList.contains('tactil')
+    $('#btn-pausa-tactica').textContent = pausaTactica ? (corto ? '▶' : '▶ Seguir') : corto ? '❚❚' : '❚❚ Pausa'
     $('#btn-velocidad').textContent = `×${velocidad}`
     $('#btn-velocidad').classList.toggle('activo', velocidad > 1)
   }
@@ -294,7 +296,8 @@ export class Hud {
         }
         g.globalAlpha = 1
       }
-      if (seleccionada) this.corchetes(s.x, s.y, Math.max(r * 1.1, 10), COLOR_PROPIO, n)
+      // En el celular, con muchas naves elegidas, corchetes sin barras: si no, no se ve nada.
+      if (seleccionada) this.corchetes(s.x, s.y, Math.max(r * 1.1, 10), COLOR_PROPIO, this.compacto && e.seleccion.size > 2 ? null : n)
       else if (!propio && e.modo === 'atacar') this.corchetes(s.x, s.y, Math.max(r * 1.1, 10), COLOR_ENEMIGO, null)
     }
 

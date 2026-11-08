@@ -14,9 +14,9 @@ const PASOS = [
   },
   {
     titulo: 'Mover la cámara',
-    texto: 'Deslizá <b>con dos dedos</b> en el touchpad para girar alrededor de la flota y <b>pellizcá</b> para acercarte o alejarte.',
-    textoTactil: '<b>Arrastrá con un dedo</b> para girar alrededor de la flota y <b>pellizcá</b> con dos dedos para acercarte o alejarte.',
-    hecho: (t) => t.giro > 0.6 && t.zoom > 0.25,
+    texto: 'Con mouse: <b>arrastrá con clic derecho</b> para girar y usá la <b>rueda</b> para el zoom. Con touchpad: <b>deslizá dos dedos</b> para girar y <b>pellizcá</b>.',
+    textoTactil: '<b>Arrastrá con un dedo</b> para moverte por el mapa, <b>girá dos dedos</b> para rotar y <b>pellizcá</b> para acercarte o alejarte.',
+    hecho: (t) => (t.giro > 0.6 || t.paneo > 0.4) && t.zoom > 0.25,
   },
   {
     titulo: 'Elegir batallones',
@@ -26,7 +26,7 @@ const PASOS = [
   },
   {
     titulo: 'Dar órdenes',
-    texto: 'Con algo seleccionado, hacé <b>clic con dos dedos</b> en el espacio vacío: tus naves van ahí.',
+    texto: 'Con algo seleccionado, hacé <b>clic derecho</b> (o clic con dos dedos) en el espacio vacío: tus naves van ahí.',
     textoTactil: 'Con algo seleccionado, <b>tocá el espacio vacío</b>: tus naves van ahí.',
     hecho: (t) => t.eventos.has('mover'),
   },
@@ -38,7 +38,7 @@ const PASOS = [
   },
   {
     titulo: 'Atacar',
-    texto: 'Hacé <b>clic con dos dedos sobre una nave enemiga</b> (las rojas) para atacarla. A partir de ahora el enemigo también se mueve.',
+    texto: 'Hacé <b>clic derecho sobre una nave enemiga</b> (las rojas) para atacarla. A partir de ahora el enemigo también se mueve.',
     textoTactil: 'Con algo seleccionado, <b>tocá una nave enemiga</b> (las rojas) para atacarla. A partir de ahora el enemigo también se mueve.',
     alEntrar: (t) => t.soltarIA(),
     hecho: (t) => t.eventos.has('atacar'),
@@ -81,6 +81,11 @@ export class Tutorial {
     return Math.abs(this.orbital.yaw - this.inicio.yaw) + Math.abs(this.orbital.pitch - this.inicio.pitch)
   }
 
+  // Cuánto se movió el foco, en relación con la distancia de la cámara.
+  get paneo() {
+    return this.orbital.focoDeseado.distanceTo(this.inicio.foco) / this.orbital.dist
+  }
+
   get zoom() {
     return Math.abs(Math.log(this.orbital.distDeseada / this.inicio.dist))
   }
@@ -98,7 +103,7 @@ export class Tutorial {
     if (this.i >= PASOS.length) return this.terminar()
     const p = PASOS[this.i]
     this.eventos.clear()
-    this.inicio = { yaw: this.orbital.yaw, pitch: this.orbital.pitch, dist: this.orbital.distDeseada }
+    this.inicio = { yaw: this.orbital.yaw, pitch: this.orbital.pitch, dist: this.orbital.distDeseada, foco: this.orbital.focoDeseado.clone() }
     this.espera = 0
     p.alEntrar?.(this)
     this.panel.innerHTML = `

@@ -1,13 +1,13 @@
 // Controles táctiles (celular y tablet). Se suman a los de touchpad y
 // teclado (entrada.js), que ignoran los toques.
-//   un dedo y arrastrar   → girar la cámara
-//   dos dedos             → pellizcar: zoom · arrastrar: desplazar
+//   un dedo y arrastrar   → moverse por el mapa
+//   dos dedos             → pellizcar: zoom · girarlos o deslizarlos de costado:
+//                           rotar la cámara · deslizarlos arriba o abajo: inclinarla
 //   tocar nave propia     → seleccionar su batallón (doble toque: todos los de ese tipo)
 //   mantener apretado     → sumar un batallón a la selección
 //   tocar enemigo         → atacarlo (con algo seleccionado)
 //   tocar espacio vacío   → mover la selección ahí
 // En modo "Mover" (botón), tocar elige el destino; ▲ ▼ ajustan la altura.
-import * as THREE from 'three'
 import { JUGADOR } from './sim/batalla.js'
 
 export const ES_TACTIL = window.matchMedia('(pointer: coarse)').matches
@@ -76,7 +76,7 @@ export class Tactil {
 
   medirDos() {
     const [a, b] = [...this.dedos.values()]
-    return { dist: Math.hypot(a.x - b.x, a.y - b.y), cx: (a.x + b.x) / 2, cy: (a.y + b.y) / 2 }
+    return { dist: Math.hypot(a.x - b.x, a.y - b.y), cx: (a.x + b.x) / 2, cy: (a.y + b.y) / 2, ang: Math.atan2(b.y - a.y, b.x - a.x) }
   }
 
   mover(e) {
@@ -94,20 +94,19 @@ export class Tactil {
         this.arrastrando = true
         clearTimeout(this.largo)
       }
-      if (this.arrastrando) {
-        // Un dedo: girar alrededor del foco.
-        o.yaw -= dx * 0.006
-        o.pitch = THREE.MathUtils.clamp(o.pitch + dy * 0.005, -1.45, 1.45)
-      }
+      // Un dedo: el mapa sigue al dedo.
+      if (this.arrastrando) o.desplazar(dx, dy)
     } else if (this.dedos.size === 2) {
       const m = this.medirDos()
-      // Pellizco: zoom. Arrastre de los dos dedos: desplazar el foco.
-      if (this.medida.dist > 0) o.zoom(this.medida.dist / Math.max(1, m.dist))
-      const escala = o.dist / 500
-      const adelante = new THREE.Vector3(-Math.sin(o.yaw), 0, -Math.cos(o.yaw))
-      const derecha = new THREE.Vector3(-adelante.z, 0, adelante.x)
-      o.focoDeseado.addScaledVector(derecha, -(m.cx - this.medida.cx) * escala).addScaledVector(adelante, (m.cy - this.medida.cy) * escala)
-      o.seguir = null
+      const a = this.medida
+      // Pellizco: zoom. Girar los dedos o deslizarlos de costado: rotar.
+      // Deslizarlos juntos arriba o abajo: inclinar.
+      if (a.dist > 0) o.zoom(a.dist / Math.max(1, m.dist))
+      let giro = m.ang - a.ang
+      if (giro > Math.PI) giro -= Math.PI * 2
+      if (giro < -Math.PI) giro += Math.PI * 2
+      o.yaw += giro
+      o.girar(m.cx - a.cx, m.cy - a.cy)
       this.medida = m
     }
   }
@@ -121,7 +120,7 @@ export class Tactil {
     if (this.dedos.size === 0 && !this.gestoDoble && !this.arrastrando && !this.consumido && performance.now() - d.t0 < 700)
       this.toque(d.x, d.y)
     if (this.dedos.size === 0) this.gestoDoble = false
-    else this.medida = this.medirDos()
+    else if (this.dedos.size >= 2) this.medida = this.medirDos()
   }
 
   cancelar(e) {

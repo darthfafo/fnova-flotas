@@ -164,11 +164,11 @@
         <span class="reloj" id="hud-reloj">00:00</span>
         <button class="btn chico solo-tactil" data-accion="ver-flota" title="Mostrar u ocultar tu flota">Flota</button>
         <button class="btn chico solo-tactil" data-accion="pantalla-completa" title="Pantalla completa">⛶</button>
-        <button class="btn chico" data-accion="panel-sonido" id="btn-sonido" title="Música y efectos">Sonido</button>
-        <button class="btn chico" data-accion="sensores" title="Vista táctica (Espacio)">Sensores</button>
+        <button class="btn chico" data-accion="panel-sonido" id="btn-sonido" title="Música y efectos" data-corto="♪">Sonido</button>
+        <button class="btn chico" data-accion="sensores" title="Vista táctica (Espacio)" data-corto="◎">Sensores</button>
         <button class="btn chico" data-accion="pausa-tactica" id="btn-pausa-tactica" title="Congela la batalla y te deja dar órdenes (P)">❚❚ Pausa</button>
         <button class="btn chico" data-accion="velocidad" id="btn-velocidad" title="Velocidad normal o doble (R)">×1</button>
-        <button class="btn chico" data-accion="pausa" title="Menú y controles (Esc)">Menú</button>
+        <button class="btn chico" data-accion="pausa" title="Menú y controles (Esc)" data-corto="≡">Menú</button>
       </div>
     </header>
 
@@ -177,22 +177,28 @@
     <section class="panel seleccion" id="hud-seleccion"></section>
 
     <nav class="panel comandos" id="hud-comandos">
-      <div class="grupo-comandos solo-tactil">
+      <!-- En el celular se ve una fila a la vez: la principal o la de "Más". -->
+      <div class="grupo-comandos solo-tactil principal">
         <button class="btn comando" data-cmd="todos"><b>☰</b>Todos</button>
-        <button class="btn comando" data-cmd="ninguno"><b>✕</b>Ninguno</button>
       </div>
       <div class="grupo-comandos solo-mover">
         <button class="btn comando" data-cmd="subir"><b>▲</b>Subir</button>
         <button class="btn comando" data-cmd="bajar"><b>▼</b>Bajar</button>
       </div>
-      <div class="grupo-comandos">
+      <div class="grupo-comandos principal">
         <button class="btn comando" data-cmd="mover"><b>M</b>Mover</button>
         <button class="btn comando" data-cmd="atacar"><b>A</b>Atacar</button>
         <button class="btn comando" data-cmd="detener"><b>S</b>Detener</button>
-        <button class="btn comando" data-cmd="enfocar"><b>F</b>Enfocar</button>
+        <button class="btn comando no-tactil" data-cmd="enfocar"><b>F</b>Enfocar</button>
+        <button class="btn comando solo-tactil" data-cmd="mas"><b>⋯</b>Más</button>
       </div>
-      <div class="grupo-comandos" id="hud-formaciones"></div>
-      <div class="grupo-comandos">
+      <div class="grupo-comandos solo-tactil extra">
+        <button class="btn comando" data-cmd="mas"><b>‹</b>Volver</button>
+        <button class="btn comando" data-cmd="ninguno"><b>✕</b>Ninguno</button>
+        <button class="btn comando" data-cmd="enfocar"><b>◎</b>Seguir</button>
+      </div>
+      <div class="grupo-comandos extra" id="hud-formaciones"></div>
+      <div class="grupo-comandos extra">
         <button class="btn comando" data-tactica="agresiva"><b>T</b>Agresiva</button>
         <button class="btn comando" data-tactica="neutral">Neutral</button>
         <button class="btn comando" data-tactica="evasiva">Evasiva</button>
@@ -262,6 +268,17 @@
     <p class="linea-prologo" id="cine-linea"></p>
     <button class="btn chico saltar" id="cine-saltar">Saltar ›</button>
   </div>
+
+  <section id="pantalla-guia" class="pantalla superpuesta">
+    <div class="panel ventana-guia">
+      <h2 class="encabezado">Cómo moverte</h2>
+      <div id="guia-contenido"></div>
+      <div class="guia-pie">
+        <label><input type="checkbox" id="guia-no-mostrar" /> No volver a mostrar</label>
+        <button class="btn grande" id="guia-seguir">A la batalla</button>
+      </div>
+    </div>
+  </section>
 
   <section id="pantalla-creditos" class="pantalla superpuesta">
     <div class="panel ventana-creditos">
@@ -359,12 +376,23 @@
             <dt>Mantener apretado</dt><dd>Sumar un batallón a la selección</dd>
             <dt>Tocar el espacio vacío</dt><dd>Mover la selección ahí</dd>
             <dt>Tocar un enemigo</dt><dd>Atacarlo con la selección</dd>
-            <dt>Arrastrar con un dedo</dt><dd>Girar la cámara</dd>
-            <dt>Dos dedos</dt><dd>Pellizcar: zoom · Arrastrar: desplazar la cámara</dd>
+            <dt>Arrastrar con un dedo</dt><dd>Moverte por el mapa</dd>
+            <dt>Dos dedos</dt><dd>Pellizcar: zoom · Girarlos o deslizarlos de costado: rotar · Arriba o abajo: inclinar</dd>
             <dt>Mover · ▲ ▼</dt><dd>Mover en 3D: subí o bajá y tocá el destino</dd>
-            <dt>Todos · Ninguno</dt><dd>Seleccionar toda la flota o ninguna nave</dd>
+            <dt>Todos</dt><dd>Seleccionar toda la flota</dd>
+            <dt>Más</dt><dd>Formaciones, tácticas, seguir la selección o soltarla</dd>
             <dt>Flota</dt><dd>Mostrar la lista de tus batallones</dd>
             <dt>Minimapa</dt><dd>Tocar: llevar la cámara a ese lugar</dd>
+          </dl>
+        </div>
+        <div class="solo-escritorio">
+          <h3>Mouse</h3>
+          <dl>
+            <dt>Clic izquierdo</dt><dd>Seleccionar · Arrastrar: recuadro</dd>
+            <dt>Clic derecho</dt><dd>Orden: mover al punto o atacar al enemigo</dd>
+            <dt>Arrastrar con clic derecho</dt><dd>Girar la cámara</dd>
+            <dt>Rueda</dt><dd>Zoom · Apretada y arrastrando: desplazar la cámara</dd>
+            <dt>Doble clic en el espacio</dt><dd>Llevar la cámara ahí</dd>
           </dl>
         </div>
         <div class="solo-escritorio">
@@ -375,6 +403,7 @@
             <dt>Shift + clic</dt><dd>Sumar a la selección</dd>
             <dt>Doble clic</dt><dd>Todos los del mismo tipo</dd>
             <dt>Deslizar con dos dedos</dt><dd>Girar la cámara</dd>
+            <dt>Shift + deslizar</dt><dd>Desplazar la cámara</dd>
             <dt>Pellizcar</dt><dd>Zoom</dd>
             <dt>Clic con dos dedos</dt><dd>Orden: mover al punto o atacar al enemigo</dd>
             <dt>Minimapa</dt><dd>Clic: llevar la cámara · Dos dedos: mover la selección</dd>

@@ -1,6 +1,7 @@
 // Pantallas fuera de la batalla: título, facción, armado de flota y fin.
 import { FACCIONES, TIPOS, ORDEN_TIPOS, DIFICULTADES, PRESUPUESTO_BASE, PRESUPUESTOS, PRESUPUESTO_MIN, PRESUPUESTO_MAX } from '../datos.js'
 import { MAPAS } from '../sim/terreno.js'
+import { mostrarGuia } from './guia.js'
 import { ES_TACTIL } from '../tactil.js'
 
 const $ = (s) => document.querySelector(s)
@@ -97,9 +98,9 @@ export class Menus {
         this.config.faccion = f.clave
         document.documentElement.style.setProperty('--acento', f.acentoCss)
         if (this.modo === 'rapida') {
-          // Partida rápida: flota sugerida, mapa al azar y a pelear.
+          // Partida rápida: flota sugerida, mapa al azar y, antes, la guía de controles.
           this.sugerida()
-          return this.alCombatir({ ...this.config, mapa: 'azar' })
+          return mostrarGuia(() => this.alCombatir({ ...this.config, mapa: 'azar' }))
         }
         this.refrescarFlota()
         mostrarPantalla('pantalla-flota')
